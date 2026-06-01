@@ -1,6 +1,6 @@
 import hid
 
-# You can find Vendor ID and Product ID via 'lsusb'
+# You can get Vendor ID and Product ID via 'lsusb'
 vendor_id = 0x1d57
 product_id = 0x001c
 

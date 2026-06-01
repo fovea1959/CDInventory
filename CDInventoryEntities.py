@@ -50,5 +50,15 @@ class CD(Base):
     cd_artists: Mapped[Optional[str]] = mapped_column(Text)
     cd_last_seen: Mapped[datetime.datetime] = mapped_column(DateTime)
 
+    cd_musicbrainz_id: Mapped[Optional[str]] = mapped_column(Text, unique=True)
+
     cd_location_id = mapped_column(ForeignKey("locations.location_id"))
     cd_location: Mapped["Location"] = relationship("Location", back_populates="location_contents")
+
+    def __repr__(self):
+        return self._repr(
+            id=self.cd_id,
+            description=self.cd_barcode,
+            title=self.cd_title,
+            location_id = self.cd_location_id
+        )

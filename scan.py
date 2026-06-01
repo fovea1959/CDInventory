@@ -1,12 +1,10 @@
+import datetime
 import logging
 import pickle
 import sys
 
 import cv2
 import pyzbar.pyzbar
-
-import sqlalchemy
-import sqlalchemy.orm
 
 import CDInventoryDao
 
@@ -18,35 +16,15 @@ class BarcodeStore:
         with open('barcodes.pickle', 'rb') as f:
             self.barcodes = pickle.load(f)
 
-    def find(self, barcode : str = None):
+    def get(self, barcode : str = None):
+        if len(barcode) == 12:
+            barcode = '0' + barcode
         logging.info ("looking for %s", barcode)
         return self.barcodes.get(barcode)
 
 
-class DB:
-    def __init__(self):
-        self.session = None
-        self.logger = logging.getLogger('DB')
-
-    def __enter__(self):
-        self.session = sqlalchemy.orm.Session(CDInventoryDao.engine())
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type:
-            self.logger.error(f"An error occurred: {exc_val}")
-        self.session.rollback()
-        self.session = None
-        return True  # Returning True suppress
-
-    def get_location(self, location_id : str = None):
-        query = sqlalchemy.select(Location).where(Location.location_id == location_id)
-        location = self.session.execute(query).scalar_one_or_none()
-        return location
-
-
 def main(argv):
-    barcode_store = {}  # BarcodeStore()
+    barcode_store = BarcodeStore()
 
     # Initialize camera
     cap = cv2.VideoCapture(0)
@@ -67,7 +45,7 @@ def main(argv):
 
     logging.info(f"Maximum supported resolution: {max_w}x{max_h}")
 
-    with DB() as db:
+    with CDInventoryDao.DAO() as dao:
         shape = None
         last_data = None
         current_location = None
@@ -98,19 +76,35 @@ def main(argv):
                         if len(ll) < 2:
                             ll.append('')
                         location_id, location_description = ll[:2]
-                        current_location = db.get_location(location_id)
+                        current_location = dao.get_location(location_id)
                         logging.info("got location %s", current_location)
                         if current_location is None:
                             current_location = Location()
                             current_location.location_id = location_id
-                            db.session.add(current_location)
+                            dao.session.add(current_location)
                         current_location.location_description = location_description
-                        db.session.commit()
+                        dao.session.commit()
                     elif barcode_type == 'EAN13':
-                        if len(d) == 12:
-                            d = '0' + d
-                        cd = barcode_store.find(d)
-                        print(cd)
+                        mb_cd = barcode_store.get(d)
+                        if mb_cd is not None:
+                            logging.info ("musicbrainz had %s", mb_cd)
+                            cd = dao.get_cd_by_barcode(d)
+                            logging.info("got CD %s", cd)
+                            if cd is None:
+                                cd = CD()
+                                cd.cd_barcode = d
+                                cd.cd_title = mb_cd.get('title')
+                                cd.cd_musicbrainz_id = mb_cd.get('id')
+                                cd.cd_artists = ' / '.join(mb_cd.get('artists'))
+                                dao.session.add(cd)
+                            cd.cd_last_seen = datetime.datetime.now()
+                            logging.info("current location id %s", current_location.location_id)
+                            cd.cd_location_id = current_location.location_id
+                            logging.info("CD location id set to %s", cd.cd_location_id)
+                            logging.info("saving CD %s", cd)
+                            dao.session.commit()
+                        else:
+                            logging.info ("Unable to find %s in musicbrainz", d)
                     else:
                         pass
 

@@ -2,11 +2,10 @@ import logging
 import os
 import sys
 
-from sqlalchemy.orm import Session
-from sqlalchemy import select, create_engine
-from sqlalchemy.engine.result import ScalarResult
+import sqlalchemy
+import sqlalchemy.orm
 
-import CDInventoryEntities
+from CDInventoryEntities import *
 
 logger = logging.getLogger("dao")
 
@@ -16,7 +15,35 @@ defaultFilename = "CDInventory.db"
 def engine(filename: str = None, echo: bool = False):
     if filename is None:
         filename = defaultFilename
-    return create_engine(f'sqlite:///{filename}', echo=echo)
+    return sqlalchemy.create_engine(f'sqlite:///{filename}', echo=echo)
+
+
+class DAO:
+    def __init__(self, db_filename : str = None):
+        self.session = None
+        self.logger = logging.getLogger('DB')
+        self.db_filename = db_filename
+
+    def __enter__(self):
+        self.session = sqlalchemy.orm.Session(engine(self.db_filename))
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.logger.error(f"An error occurred: {exc_val}")
+        self.session.rollback()
+        self.session = None
+        return True  # Returning True suppress
+
+    def get_location(self, location_id : str = None) -> Optional[Location]:
+        query = sqlalchemy.select(Location).where(Location.location_id == location_id)
+        rv = self.session.execute(query).scalar_one_or_none()
+        return rv
+
+    def get_cd_by_barcode(self, barcode : str = None) -> Optional[CD]:
+        query = sqlalchemy.select(CD).where(CD.cd_barcode == barcode)
+        rv = self.session.execute(query).scalar_one_or_none()
+        return rv
 
 
 def main(argv):
@@ -24,7 +51,7 @@ def main(argv):
         os.remove(defaultFilename)
     except FileNotFoundError:
         pass
-    CDInventoryEntities.Base.metadata.create_all(engine())
+    Base.metadata.create_all(engine())
 
 
 if __name__ == '__main__':

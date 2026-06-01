@@ -16,7 +16,7 @@ class jsonpath_expr_thingy(dict):
 
     def find(self, expr_text, o):
         expr = self[expr_text]
-        rv = list(expr.find(o))
+        rv = list(expr.get(o))
         return rv
 
     def find1(self, expr_text, o):
