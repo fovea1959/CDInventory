@@ -45,6 +45,16 @@ class DAO:
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
+    def get_cd_by_musicbrainz_id(self, musicbrainz_id : str = None) -> Optional[CD]:
+        query = sqlalchemy.select(CD).where(CD.cd_musicbrainz_id == musicbrainz_id)
+        rv = self.session.execute(query).scalar_one_or_none()
+        return rv
+
+    def get_barcode_alias(self, barcode : str = None) -> Optional[BarcodeAlias]:
+        query = sqlalchemy.select(BarcodeAlias).where(BarcodeAlias.scan_text == barcode)
+        rv = self.session.execute(query).scalar_one_or_none()
+        return rv
+
 
 def main(argv):
     try:

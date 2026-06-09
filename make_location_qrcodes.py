@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import pathlib
 import random
@@ -88,9 +89,18 @@ def main(argv):
                 border=4,
             )
             id = str(uuid4.next())
-            qr.add_data(id + ',' + description)
-            qr.make(fit=True)
 
+            if False:
+                qr.add_data(id + ',' + description)
+            else:
+                qr_data = {
+                    'type': 'location',
+                    'id': id,
+                    'description': description
+                }
+                qr.add_data(json.dumps(qr_data))
+
+            qr.make(fit=True)
             img = qr.make_image(fill_color="black", back_color="white")
 
             row.cell(img=img.get_image())

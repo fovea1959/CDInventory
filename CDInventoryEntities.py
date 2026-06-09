@@ -58,7 +58,7 @@ class CD(Base):
     def __repr__(self):
         return self._repr(
             id=self.cd_id,
-            description=self.cd_barcode,
+            barcode=self.cd_barcode,
             title=self.cd_title,
             artist=self.cd_artists,
             location_id = self.cd_location_id
