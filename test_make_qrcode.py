@@ -9,7 +9,7 @@ qr = qrcode.QRCode(
     box_size=10,
     border=4,
 )
-qr.add_data(str(uuid.uuid4()) + ', Office Left #1')
+qr.add_data(str(uuid.uuid4()) + ',Office Left #1')
 qr.make(fit=True)
 
 img = qr.make_image(fill_color="black", back_color="white")

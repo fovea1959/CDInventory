@@ -33,7 +33,7 @@ class DAO:
             self.logger.error(f"An error occurred: {exc_val}")
         self.session.rollback()
         self.session = None
-        return True  # Returning True suppress
+        return False  # Returning True suppress
 
     def get_location(self, location_id : str = None) -> Optional[Location]:
         query = sqlalchemy.select(Location).where(Location.location_id == location_id)
@@ -49,6 +49,7 @@ class DAO:
 def main(argv):
     try:
         os.remove(defaultFilename)
+        # pass
     except FileNotFoundError:
         pass
     Base.metadata.create_all(engine())

@@ -1,10 +1,18 @@
+import argparse
 import datetime
+import json
 import logging
 import pickle
+import queue
 import sys
+import threading
+import time
 
 import cv2
+import musicbrainzngs
 import pyzbar.pyzbar
+import soundfile as sf
+import sounddevice as sd
 
 import CDInventoryDao
 
@@ -23,36 +31,127 @@ class BarcodeStore:
         return self.barcodes.get(barcode)
 
 
+class MB:
+    def __init__(self):
+        musicbrainzngs.set_useragent("MyCDLookupApp", "0.1", "https://github.com")
+
+    def lookup_by_barcode(self, barcode: str = None):
+        query = f'barcode:"{barcode}"'
+
+        if len(barcode) == 13:
+            query = query + f' OR barcode:"{barcode[:12]}"'
+
+        if barcode[0] == '0':
+            query = query + f' OR barcode:"{barcode[1:]}"'
+
+        # query = query + f' OR barcode:"5017261210685"'
+
+        logging.info("query = '%s'", query)
+
+        result = musicbrainzngs.search_releases(query=query, limit=5)
+
+        if "release-list" in result:
+            for release in result["release-list"]:
+                album_name = release.get("title")
+                artist = release.get("artist-credit-phrase")
+                mbid = release.get("id")  # MusicBrainz Identifier
+
+                logging.info(f"Match: {album_name} - {artist} (MBID: {mbid})")
+                logging.debug(json.dumps(release, indent=1))
+
+                artists = []
+                for ac in release.get("artist-credit", []):
+                    if type(ac) is str:  # could be "," or "&"
+                        continue
+                    artists.append(ac.get('name'))
+                release['artists'] = artists
+                return release
+
+
+class BufferlesCvCapture:
+    def __init__(self, name, max_resolution: bool = False):
+        self.name = name
+        self.should_run = True
+        self.running = False
+        # Initialize camera
+        self.cap = cv2.VideoCapture("/dev/video2", cv2.CAP_V4L2)
+        if not self.cap.isOpened():
+            raise Exception("Could not open video.")
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        if max_resolution:
+            # Set to an impossibly large target
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 100000)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 100000)
+            # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+        else:
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+        # Verification (Optional: Check if the codec updated successfully)
+        fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC))
+        codec = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
+        logging.info(f"Current format: {codec}")
+
+        # Read the clipped maximum limits back
+        max_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        max_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        logging.info(f"Resolution: {max_w}x{max_h}")
+
+        self.q = queue.Queue()
+        t = threading.Thread(target=self._reader)
+        t.daemon = True
+        t.start()
+
+    # read frames as soon as they are available, keeping only most recent one
+    def _reader(self):
+        self.running = True
+        while self.should_run:
+            ret, frame = self.cap.read()
+            if not ret:
+                raise Exception("Could not read frame.")
+            if not self.q.empty():
+                try:
+                    self.q.get_nowait()  # discard previous (unprocessed) frame
+                except queue.Empty:
+                    pass
+            self.q.put(frame)
+        self.running = False
+
+    def read(self):
+        im = self.q.get()
+        return cv2.flip(im, -1)
+
+    def release(self):
+        self.should_run = False
+        while self.running:
+            time.sleep(0.1)
+        self.cap.release()
+
+
 def main(argv):
-    barcode_store = BarcodeStore()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--max-resolution', action='store_true')
+    parser.add_argument('--verbose', action='store_true')
+    args = parser.parse_args(argv)
 
-    # Initialize camera
-    cap = cv2.VideoCapture(0)
-    if False:
-        # Set to an impossibly large target
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 100000)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 100000)
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+    logging.info('called with %s', args)
 
-    # Verification (Optional: Check if the codec updated successfully)
-    fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
-    codec = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
-    logging.info(f"Current format: {codec}")
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
-    # Read the clipped maximum limits back
-    max_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    max_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    barcode_store = {}  # BarcodeStore()
 
-    logging.info(f"Maximum supported resolution: {max_w}x{max_h}")
+    cam = BufferlesCvCapture(1)
 
+    mb = MB()
     with CDInventoryDao.DAO() as dao:
         shape = None
         last_data = None
         current_location = None
         while True:
             # Read frame
-            ret, frame = cap.read()
-            if not ret: break
+            frame = cam.read()
 
             if shape is None:
                 shape = frame.shape
@@ -82,10 +181,17 @@ def main(argv):
                             current_location = Location()
                             current_location.location_id = location_id
                             dao.session.add(current_location)
-                        current_location.location_description = location_description
+                        current_location.location_description = location_description.strip()
                         dao.session.commit()
+
+                        data, fs = sf.read('audio_data_ping.wav')
+                        sd.play(data, fs)
+                        # sd.wait()  # Wait until the sound finishes playing
+
                     elif barcode_type == 'EAN13':
                         mb_cd = barcode_store.get(d)
+                        if mb_cd is None:
+                            mb_cd = mb.lookup_by_barcode(d)
                         if mb_cd is not None:
                             logging.info ("musicbrainz had %s", mb_cd)
                             cd = dao.get_cd_by_barcode(d)
@@ -98,22 +204,36 @@ def main(argv):
                                 cd.cd_artists = ' / '.join(mb_cd.get('artists'))
                                 dao.session.add(cd)
                             cd.cd_last_seen = datetime.datetime.now()
-                            logging.info("current location id %s", current_location.location_id)
-                            cd.cd_location_id = current_location.location_id
-                            logging.info("CD location id set to %s", cd.cd_location_id)
-                            logging.info("saving CD %s", cd)
-                            dao.session.commit()
+                            if current_location is not None:
+                                logging.info("current location id %s", current_location.location_id)
+                                cd.cd_location_id = current_location.location_id
+                                logging.info("CD location id set to %s", cd.cd_location_id)
+                                logging.info("saving CD %s (%s)", cd, cd.cd_location.location_description)
+                                dao.session.commit()
+
+                            data, fs = sf.read('audio_data_ping.wav')
+                            sd.play(data, fs)
+                            # sd.wait()  # Wait until the sound finishes playing
+
                         else:
+                            data, fs = sf.read('audio_data_error.wav')
+                            sd.play(data, fs)
+                            # sd.wait()  # Wait until the sound finishes playing
+
                             logging.info ("Unable to find %s in musicbrainz", d)
                     else:
-                        pass
+                        # unknown barcode type
+                        data, fs = sf.read('audio_data_error.wav')
+                        sd.play(data, fs)
+                        # sd.wait()  # Wait until the sound finishes playing
+
 
             # Exit with 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
     # Cleanup
-    cap.release()
+    cam.release()
     cv2.destroyAllWindows()
 
 
