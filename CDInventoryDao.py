@@ -12,14 +12,14 @@ logger = logging.getLogger("dao")
 defaultFilename = "CDInventory.db"
 
 
-def engine(filename: str = None, echo: bool = False):
-    if filename is None:
+def engine(filename: str = '', echo: bool = False):
+    if filename == '':
         filename = defaultFilename
     return sqlalchemy.create_engine(f'sqlite:///{filename}', echo=echo)
 
 
 class DAO:
-    def __init__(self, db_filename : str = None):
+    def __init__(self, db_filename : str = ''):
         self.session = None
         self.logger = logging.getLogger('DB')
         self.db_filename = db_filename
@@ -35,27 +35,28 @@ class DAO:
         self.session = None
         return False  # Returning True suppress
 
-    def get_location(self, location_id : str = None) -> Optional[Location]:
+    def get_location(self, location_id : str = '') -> Optional[Location]:
         query = sqlalchemy.select(Location).where(Location.location_id == location_id)
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
-    def get_cd_by_barcode(self, barcode : str = None) -> Optional[CD]:
+    def get_cd_by_barcode(self, barcode : str = '') -> Optional[CD]:
         query = sqlalchemy.select(CD).where(CD.cd_barcode == barcode)
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
-    def get_cd_by_musicbrainz_id(self, musicbrainz_id : str = None) -> Optional[CD]:
+    def get_cd_by_musicbrainz_id(self, musicbrainz_id : str = '') -> Optional[CD]:
         query = sqlalchemy.select(CD).where(CD.cd_musicbrainz_id == musicbrainz_id)
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
-    def get_barcode_alias(self, barcode : str = None) -> Optional[BarcodeAlias]:
-        query = sqlalchemy.select(BarcodeAlias).where(BarcodeAlias.scan_text == barcode)
+    def get_barcode_alias(self, barcode_type : str = '', barcode : str = '') -> Optional[BarcodeAlias]:
+        query = sqlalchemy.select(BarcodeAlias).where(BarcodeAlias.scan_encoding == barcode_type, BarcodeAlias.scan_text == barcode)
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
 
+# noinspection PyUnusedLocal
 def main(argv):
     try:
         os.remove(defaultFilename)

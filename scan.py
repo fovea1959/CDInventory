@@ -8,6 +8,8 @@ import sys
 import threading
 import time
 
+from typing import Optional
+
 import cv2
 import musicbrainzngs
 import pyzbar.pyzbar
@@ -19,13 +21,41 @@ import CDInventoryDao
 from CDInventoryEntities import CD, Location
 
 
+class Beeper:
+    def __init__(self):
+        self.stuff = {}
+        self.load('audio_data_ping.wav')
+        self.load('audio_data_error.wav')
+
+    def load(self, filename):
+        self.stuff[filename] = sf.read(filename)
+
+    def play(self, filename):
+        data, fs = self.stuff.get(filename)
+        sd.play(data, fs)
+
+    def happy(self):
+        self.play('audio_data_ping.wav')
+
+    def sad(self):
+        self.play('audio_data_error.wav')
+
+
+class G:
+    def __init__(self):
+        self.dao = None
+        self.mb = None
+        self.current_location = None
+        self.beeper = Beeper()
+
+
 class BufferlesCvCapture:
-    def __init__(self, name, max_resolution: bool = False):
+    def __init__(self, name : str = "/dev/video0", max_resolution: bool = False):
         self.name = name
         self.should_run = True
         self.running = False
         # Initialize camera
-        self.cap = cv2.VideoCapture("/dev/video2", cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture(name, cv2.CAP_V4L2)
         if not self.cap.isOpened():
             raise Exception("Could not open video.")
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -80,23 +110,12 @@ class BufferlesCvCapture:
         self.cap.release()
 
 
-class BarcodeStore:
-    def __init__(self):
-        with open('barcodes.pickle', 'rb') as f:
-            self.barcodes = pickle.load(f)
-
-    def get(self, barcode : str = None):
-        if len(barcode) == 12:
-            barcode = '0' + barcode
-        logging.info ("looking for %s", barcode)
-        return self.barcodes.get(barcode)
-
-
 class MB:
     def __init__(self):
         musicbrainzngs.set_useragent("MyCDLookupApp", "0.1", "https://github.com")
 
-    def lookup_by_barcode(self, barcode: str = None):
+    @staticmethod
+    def lookup_by_barcode(barcode: str = '') -> Optional[dict]:
         query = f'barcode:"{barcode}"'
 
         if len(barcode) == 13:
@@ -128,8 +147,9 @@ class MB:
                 logging.debug(json.dumps(release, indent=1))
 
                 return release
+        return None
 
-    def lookup_by_release_id(self, release_id: str = None):
+    def lookup_by_release_id(self, release_id: str = ''):
         release = musicbrainzngs.get_release_by_id(release_id, includes=['artists'])
         if release is not None:
             release = release.get('release')
@@ -144,9 +164,9 @@ class MB:
         return release
 
 
-def save_cd(dao, barcode, mb_cd, current_location):
+def save_cd(g : G, barcode, mb_cd):
     musicbrainz_id = mb_cd.get('id')
-    cd = dao.get_cd_by_musicbrainz_id(musicbrainz_id=musicbrainz_id)
+    cd = g.dao.get_cd_by_musicbrainz_id(musicbrainz_id=musicbrainz_id)
     brand_new = cd is None
     logging.info("database contains CD %s", cd)
     if brand_new:
@@ -156,30 +176,46 @@ def save_cd(dao, barcode, mb_cd, current_location):
     cd.cd_musicbrainz_id = musicbrainz_id
     cd.cd_artists = ' / '.join(mb_cd.get('artists'))
     if brand_new:
-        dao.session.add(cd)
+        g.dao.session.add(cd)
     cd.cd_last_seen = datetime.datetime.now()
-    if current_location is not None:
-        logging.info("current location id %s", current_location.location_id)
-        cd.cd_location_id = current_location.location_id
+    if g.current_location is not None:
+        logging.info("current location id %s", g.current_location.location_id)
+        cd.cd_location_id = g.current_location.location_id
         logging.info("CD location id set to %s", cd.cd_location_id)
-        dao.session.commit()
+        g.dao.session.commit()
         logging.info("saved CD %s (%s)", cd, cd.cd_location.location_description)
 
 
-def save_location(dao, location_id, location_description):
-    current_location = dao.get_location(location_id)
+def save_location(g : G, location_id, location_description):
+    current_location = g.dao.get_location(location_id)
     logging.info("got location %s", current_location)
     if current_location is None:
         current_location = Location()
         current_location.location_id = location_id
-        dao.session.add(current_location)
+        g.dao.session.add(current_location)
     current_location.location_description = location_description.strip()
-    dao.session.commit()
-    return current_location
+    g.dao.session.commit()
+    g.current_location = current_location
+
+
+def check_and_handle_aliased_scan(g : G, barcode_type : str = '', barcode : str = '') -> bool:
+    alias = g.dao.get_barcode_alias(barcode_type, barcode)
+    logging.info("got alias %s", alias)
+    if alias is None:
+        return False
+
+    mb_release = g.mb.lookup_by_release_id(alias.musicbrainz_release_id)
+    if mb_release is not None:
+        save_cd(g, barcode, mb_release)
+        g.beeper.happy()
+    else:
+        g.beeper.sad()
+    return True
 
 
 def main(argv):
     parser = argparse.ArgumentParser()
+    parser.add_argument('--camera', default='/dev/video0')
     parser.add_argument('--max-resolution', action='store_true')
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args(argv)
@@ -191,13 +227,16 @@ def main(argv):
 
     barcode_store = {}  # BarcodeStore()
 
-    cam = BufferlesCvCapture(1)
+    cam = BufferlesCvCapture(args.camera)
 
-    mb = MB()
+    g = G()
+    g.mb = MB()
+    g.current_location = None
+
     with CDInventoryDao.DAO() as dao:
+        g.dao = dao
         shape = None
         last_data = None
-        current_location = None
         while True:
             # Read frame
             frame = cam.read()
@@ -224,7 +263,7 @@ def main(argv):
                         if barcode[0] == '{':
                             qrdata = json.loads(barcode)
                             if qrdata.get('type') == 'location':
-                                current_location = save_location(dao, qrdata.get('id'), qrdata.get('description'))
+                                save_location(g, qrdata.get('id'), qrdata.get('description'))
                             else:
                                 ok = False
                         else:
@@ -232,51 +271,30 @@ def main(argv):
                             if len(ll) < 2:
                                 ll.append('')
                             location_id, location_description = ll[:2]
-                            current_location = save_location(dao, location_id, location_description)
+                            save_location(g, location_id, location_description)
 
-                        data, fs = sf.read('audio_data_ping.wav') if ok else sf.read('audio_data_error.wav')
-                        sd.play(data, fs)
-                        # sd.wait()  # Wait until the sound finishes playing
+                        g.beeper.happy() if ok else g.beeper.sad()
 
                     elif barcode_type == 'EAN13':
-                        mb_release = barcode_store.get(barcode)
-                        if mb_release is None:
-                            mb_release = mb.lookup_by_barcode(barcode)
-                        if mb_release is not None:
-                            logging.info ("musicbrainz had %s", mb_release)
+                        handled = check_and_handle_aliased_scan(g, barcode_type, barcode)
+                        if not handled:
+                            mb_release = g.mb.lookup_by_barcode(barcode)
+                            if mb_release is not None:
+                                logging.info ("musicbrainz had %s", mb_release)
+                                save_cd(g, barcode, mb_release)
+                                g.beeper.happy()
+                            else:
+                                logging.info ("Unable to find barcode '%s' in musicbrainz", barcode)
+                                g.beeper.sad()
 
-                            save_cd(dao, barcode, mb_release, current_location)
-
-                            data, fs = sf.read('audio_data_ping.wav')
-                            sd.play(data, fs)
-                            # sd.wait()  # Wait until the sound finishes playing
-                        else:
-                            data, fs = sf.read('audio_data_error.wav')
-                            sd.play(data, fs)
-                            # sd.wait()  # Wait until the sound finishes playing
-
-                            logging.info ("Unable to find barcode '%s' in musicbrainz", barcode)
                     elif barcode_type == 'CODE39':
-                        alias = dao.get_barcode_alias(barcode)
-                        logging.info("got alias %s", alias)
-                        mb_release = mb.lookup_by_release_id(alias.musicbrainz_release_id)
-                        if mb_release is not None:
-                            save_cd(dao, barcode, mb_release, current_location)
-
-                            data, fs = sf.read('audio_data_ping.wav')
-                            sd.play(data, fs)
-                            # sd.wait()  # Wait until the sound finishes playing
-                        else:
-                            data, fs = sf.read('audio_data_error.wav')
-                            sd.play(data, fs)
-                            # sd.wait()  # Wait until the sound finishes playing
+                        handled = check_and_handle_aliased_scan(g, barcode_type, barcode)
+                        if not handled:
+                            g.beeper.sad()
 
                     else:
                         # unknown barcode type
-                        data, fs = sf.read('audio_data_error.wav')
-                        sd.play(data, fs)
-                        # sd.wait()  # Wait until the sound finishes playing
-
+                        g.beeper.sad()
 
             # Exit with 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
