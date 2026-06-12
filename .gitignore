@@ -167,4 +167,5 @@ _test*.png
 barcodes.json
 barcodes.pickle
 *.db
+chromium_user_data/
 
