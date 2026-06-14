@@ -1,24 +1,17 @@
 import argparse
-import datetime
 import json
 import logging
-import pickle
-import queue
 import sys
-import threading
-import time
-
-from typing import Optional
 
 import cv2
-import musicbrainzngs
+
 import pyzbar.pyzbar
 import soundfile as sf
 import sounddevice as sd
 
 import CDInventoryDao
 
-from CDInventoryEntities import CD, Location
+from utils import MB, BufferlesCvCapture, save_cd, save_location
 
 
 class Beeper:
@@ -49,156 +42,7 @@ class G:
         self.beeper = Beeper()
 
 
-class BufferlesCvCapture:
-    def __init__(self, name : str = "/dev/video0", max_resolution: bool = False):
-        self.name = name
-        self.should_run = True
-        self.running = False
-        # Initialize camera
-        self.cap = cv2.VideoCapture(name, cv2.CAP_V4L2)
-        if not self.cap.isOpened():
-            raise Exception("Could not open video.")
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        if max_resolution:
-            # Set to an impossibly large target
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 100000)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 100000)
-            # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
-        else:
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
-        # Verification (Optional: Check if the codec updated successfully)
-        fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC))
-        codec = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
-        logging.info(f"Current format: {codec}")
-
-        # Read the clipped maximum limits back
-        max_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        max_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        logging.info(f"Resolution: {max_w}x{max_h}")
-
-        self.q = queue.Queue()
-        t = threading.Thread(target=self._reader)
-        t.daemon = True
-        t.start()
-
-    # read frames as soon as they are available, keeping only most recent one
-    def _reader(self):
-        self.running = True
-        while self.should_run:
-            ret, frame = self.cap.read()
-            if not ret:
-                raise Exception("Could not read frame.")
-            if not self.q.empty():
-                try:
-                    self.q.get_nowait()  # discard previous (unprocessed) frame
-                except queue.Empty:
-                    pass
-            self.q.put(frame)
-        self.running = False
-
-    def read(self):
-        im = self.q.get()
-        return cv2.flip(im, -1)
-
-    def release(self):
-        self.should_run = False
-        while self.running:
-            time.sleep(0.1)
-        self.cap.release()
-
-
-class MB:
-    def __init__(self):
-        musicbrainzngs.set_useragent("MyCDLookupApp", "0.1", "https://github.com")
-
-    @staticmethod
-    def lookup_by_barcode(barcode: str = '') -> Optional[dict]:
-        query = f'barcode:"{barcode}"'
-
-        if len(barcode) == 13:
-            query = query + f' OR barcode:"{barcode[:12]}"'
-
-        if barcode[0] == '0':
-            query = query + f' OR barcode:"{barcode[1:]}"'
-
-        # query = query + f' OR barcode:"5017261210685"'
-
-        logging.info("query = '%s'", query)
-
-        result = musicbrainzngs.search_releases(query=query, limit=5)
-
-        if "release-list" in result:
-            for release in result["release-list"]:
-                album_name = release.get("title")
-                artist = release.get("artist-credit-phrase")
-                mbid = release.get("id")  # MusicBrainz Identifier
-
-                artists = []
-                for ac in release.get("artist-credit", []):
-                    if type(ac) is str:  # could be "," or "&"
-                        continue
-                    artists.append(ac.get('name'))
-                release['artists'] = artists
-
-                logging.info(f"Match: {album_name} - {artist} (MBID: {mbid})")
-                logging.debug(json.dumps(release, indent=1))
-
-                return release
-        return None
-
-    def lookup_by_release_id(self, release_id: str = ''):
-        release = musicbrainzngs.get_release_by_id(release_id, includes=['artists'])
-        if release is not None:
-            release = release.get('release')
-        logging.info("got release %s", release)
-        if release is not None:
-            artists = []
-            for ac in release.get("artist-credit", []):
-                if type(ac) is str:  # could be "," or "&"
-                    continue
-                artists.append(ac.get('artist', {}).get('name'))
-            release['artists'] = artists
-        return release
-
-
-def save_cd(g : G, barcode, mb_cd):
-    musicbrainz_id = mb_cd.get('id')
-    cd = g.dao.get_cd_by_musicbrainz_id(musicbrainz_id=musicbrainz_id)
-    brand_new = cd is None
-    logging.info("database contains CD %s", cd)
-    if brand_new:
-        cd = CD()
-        cd.cd_barcode = barcode
-    cd.cd_title = mb_cd.get('title')
-    cd.cd_musicbrainz_id = musicbrainz_id
-    cd.cd_artists = ' / '.join(mb_cd.get('artists'))
-    if brand_new:
-        g.dao.session.add(cd)
-    cd.cd_last_seen = datetime.datetime.now()
-    if g.current_location is not None:
-        logging.info("current location id %s", g.current_location.location_id)
-        cd.cd_location_id = g.current_location.location_id
-        logging.info("CD location id set to %s", cd.cd_location_id)
-        g.dao.session.commit()
-        logging.info("saved CD %s (%s)", cd, cd.cd_location.location_description)
-
-
-def save_location(g : G, location_id, location_description):
-    current_location = g.dao.get_location(location_id)
-    logging.info("got location %s", current_location)
-    if current_location is None:
-        current_location = Location()
-        current_location.location_id = location_id
-        g.dao.session.add(current_location)
-    current_location.location_description = location_description.strip()
-    g.dao.session.commit()
-    g.current_location = current_location
-
-
-def check_and_handle_aliased_scan(g : G, barcode_type : str = '', barcode : str = '') -> bool:
+def check_and_handle_aliased_scan(g: G, barcode_type: str = '', barcode: str = '') -> bool:
     alias = g.dao.get_barcode_alias(barcode_type, barcode)
     logging.info("got alias %s", alias)
     if alias is None:
@@ -206,7 +50,7 @@ def check_and_handle_aliased_scan(g : G, barcode_type : str = '', barcode : str 
 
     mb_release = g.mb.lookup_by_release_id(alias.musicbrainz_release_id)
     if mb_release is not None:
-        save_cd(g, barcode, mb_release)
+        save_cd(g.dao, barcode, mb_release, g.current_location)
         g.beeper.happy()
     else:
         g.beeper.sad()
@@ -225,8 +69,6 @@ def main(argv):
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    barcode_store = {}  # BarcodeStore()
-
     cam = BufferlesCvCapture(args.camera)
 
     g = G()
@@ -243,7 +85,7 @@ def main(argv):
 
             if shape is None:
                 shape = frame.shape
-                logging.info ("shape = %s", shape)
+                logging.info("shape = %s", shape)
 
             # Process: Convert to grayscale and blur
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -263,7 +105,7 @@ def main(argv):
                         if barcode[0] == '{':
                             qrdata = json.loads(barcode)
                             if qrdata.get('type') == 'location':
-                                save_location(g, qrdata.get('id'), qrdata.get('description'))
+                                g.current_location = save_location(g.dao, qrdata.get('id'), qrdata.get('description'))
                             else:
                                 ok = False
                         else:
@@ -271,7 +113,7 @@ def main(argv):
                             if len(ll) < 2:
                                 ll.append('')
                             location_id, location_description = ll[:2]
-                            save_location(g, location_id, location_description)
+                            g.current_location = save_location(g.dao, location_id, location_description)
 
                         g.beeper.happy() if ok else g.beeper.sad()
 
@@ -280,11 +122,11 @@ def main(argv):
                         if not handled:
                             mb_release = g.mb.lookup_by_barcode(barcode)
                             if mb_release is not None:
-                                logging.info ("musicbrainz had %s", mb_release)
-                                save_cd(g, barcode, mb_release)
+                                logging.info("musicbrainz had %s", mb_release)
+                                save_cd(g.dao, barcode, mb_release, g.current_location)
                                 g.beeper.happy()
                             else:
-                                logging.info ("Unable to find barcode '%s' in musicbrainz", barcode)
+                                logging.info("Unable to find barcode '%s' in musicbrainz", barcode)
                                 g.beeper.sad()
 
                     elif barcode_type == 'CODE39':

@@ -5,11 +5,13 @@ import queue
 import sys
 import threading
 
-import tkinter as tk
+import cv2
+import pyzbar.pyzbar
 
 from playwright.sync_api import sync_playwright
 from playwright._impl._errors import TargetClosedError
 
+import utils
 from scan_gui_generic_app import CDInventoryGenericApp
 
 
@@ -21,6 +23,7 @@ class G:
     def __init__(self):
         self.gui: CDInventoryApp | None = None
         self.master: Master | None = None
+        self.barcode_reader: CVBarcodeReader | None = None
         self.die = False
 
 
@@ -50,14 +53,60 @@ class Master:
     def check_thread(self):
         current_thread = threading.current_thread()
         if current_thread != self.thread:
-            raise WrongThreadException (f"should be on thread {self.thread}, am on {current_thread}")
+            raise WrongThreadException(f"should be on thread {self.thread}, am on {current_thread}")
 
     def receive_scan(self, barcode_type, barcode):
+        self.logger.info("master received %s barcode: %s", barcode_type, barcode)
         self.check_thread()
 
     def receive_url(self, url):
+        self.logger.info("master received URL: %s", url)
         self.check_thread()
         self.g.gui.do(lambda: self.g.gui.label_url_text.set(url))
+
+
+class CVBarcodeReader:
+    def __init__(self, g: G | None = None, name: str = '/dev/video0'):
+        self.g = g
+        self.cam = utils.BufferlesCvCapture(name)
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        thread = threading.Thread(target=self.run, daemon=True, name="Barcode")
+        thread.start()
+
+    def run(self):
+        shape = None
+        last_data = None
+        while not self.g.die:
+            # Read frame
+            frame = self.cam.read()
+
+            if shape is None:
+                shape = frame.shape
+                self.logger.info("shape = %s", shape)
+
+            # Process: Convert to grayscale and blur
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            cv2.imshow('Gray', gray)
+
+            zbar = pyzbar.pyzbar.decode(gray)
+            if len(zbar) > 0:
+                d = zbar[0].data
+                if d != last_data:
+                    last_data = d
+                    barcode = d.decode()
+                    barcode_type = zbar[0].type
+                    self.logger.info("Got %s: %s", barcode_type, barcode)
+
+                    self.g.master.do(lambda: self.g.master.receive_scan(barcode_type, barcode))
+
+            # Exit with 'q'
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        # Cleanup
+        self.cam.release()
+        cv2.destroyAllWindows()
 
 
 class Browser:
@@ -77,7 +126,7 @@ class Browser:
                 browser = p.chromium.launch_persistent_context(user_data_dir="chromium_user_data", headless=False)
                 page = browser.new_page()
                 context = page.context
-                page_or_context = page
+                page_or_context = page or context
 
                 '''
                 # Track all network requests made by the page
@@ -102,10 +151,10 @@ class Browser:
                         page.wait_for_timeout(1000)
 
                 except TargetClosedError:
-                    logging.info("browser was closed; re-opening")
+                    self.logger.info("browser was closed; re-opening")
 
                 except Exception as e:
-                    logging.error(f"An error occurred: {type(e)} {e}")
+                    self.logger.error(f"An error occurred: {type(e)} {e}")
                     break
 
 
@@ -132,6 +181,7 @@ def main(argv):
 
     g.master = Master(g=g)
     g.browser = Browser(g=g, start_url='https://www.musicbrainz.org')
+    g.barcodeReader = CVBarcodeReader(g=g)
 
     logging.info("browser started")
 
