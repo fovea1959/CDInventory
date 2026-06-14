@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.5" author="PygubuDesigner 0.41.4">
+  <project>
+    <settings>
+      <setting id="name">CDInventory GUI</setting>
+      <setting id="description">my app</setting>
+      <setting id="template">application</setting>
+      <setting id="main_widget">tk1</setting>
+      <setting id="module_namespace" />
+      <setting id="module_name">scan_gui_generic_app</setting>
+      <setting id="main_classname">CDInventoryGenericApp</setting>
+      <setting id="output_dir">.</setting>
+      <setting id="builder_namespace">custom_widgets</setting>
+      <setting id="output_dir2" />
+      <setting id="generate_code_onsave">True</setting>
+      <setting id="use_i18n">False</setting>
+      <setting id="all_ids_attributes">False</setting>
+      <setting id="import_tkvariables">False</setting>
+      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_window_centering_code">False</setting>
+      <setting id="ttk_style_definition_file" />
+    </settings>
+    <customwidgets />
+    <resources />
+  </project>
+  <object class="tk.Tk" id="tk1">
+    <property name="background">#86d9d9</property>
+    <property name="height">240</property>
+    <property name="title" translatable="yes">CD Inventory</property>
+    <property name="width">320</property>
+    <containerlayout manager="grid">
+      <property type="col" id="0" name="weight">1</property>
+      <property type="row" id="0" name="weight">1</property>
+    </containerlayout>
+    <child>
+      <object class="ttk.Frame" id="frame1">
+        <property name="height">240</property>
+        <property name="width">320</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">0</property>
+          <property name="sticky">nsew</property>
+        </layout>
+        <containerlayout manager="grid">
+          <property name="propagate">false</property>
+          <property type="col" id="0" name="weight">1</property>
+          <property type="row" id="0" name="weight">1</property>
+        </containerlayout>
+        <child>
+          <object class="ttk.Label" id="hello_world" named="True">
+            <property name="anchor">center</property>
+            <property name="font">{Classic Console} 26 {}</property>
+            <property name="foreground">#0000b8</property>
+            <property name="text" translatable="yes">Hello, World!</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="columnspan">1</property>
+              <property name="row">0</property>
+              <property name="rowspan">1</property>
+              <property name="sticky">nsew</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="browser_url" named="True">
+            <property name="textvariable">string:label_url_text</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="scan_code" named="True">
+            <property name="text" translatable="yes">scan_code</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">4</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="button1">
+            <property name="text" translatable="yes">button1</property>
+            <bind sequence="&lt;ButtonRelease&gt;" handler="cb_link_url_and_scan_code" add="" />
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">3</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
