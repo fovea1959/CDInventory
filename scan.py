@@ -6,32 +6,11 @@ import sys
 import cv2
 
 import pyzbar.pyzbar
-import soundfile as sf
-import sounddevice as sd
+
 
 import CDInventoryDao
 
-from utils import MB, BufferlesCvCapture, save_cd, save_location
-
-
-class Beeper:
-    def __init__(self):
-        self.stuff = {}
-        self.load('audio_data_ping.wav')
-        self.load('audio_data_error.wav')
-
-    def load(self, filename):
-        self.stuff[filename] = sf.read(filename)
-
-    def play(self, filename):
-        data, fs = self.stuff.get(filename)
-        sd.play(data, fs)
-
-    def happy(self):
-        self.play('audio_data_ping.wav')
-
-    def sad(self):
-        self.play('audio_data_error.wav')
+from utils import MB, BufferlesCvCapture, save_cd, save_location, Beeper
 
 
 class G:

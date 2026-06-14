@@ -304,7 +304,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781463354261</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="barcodes are going to master task.">
+      <option name="closed" value="true" />
+      <created>1781465761684</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1781465761684</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -329,7 +337,8 @@
     <MESSAGE value="playwright works" />
     <MESSAGE value="playright url changes are reflected in gui" />
     <MESSAGE value="master task is working." />
-    <option name="LAST_COMMIT_MESSAGE" value="master task is working." />
+    <MESSAGE value="barcodes are going to master task." />
+    <option name="LAST_COMMIT_MESSAGE" value="barcodes are going to master task." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -345,12 +354,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/scan.py</url>
-          <line>99</line>
+          <line>78</line>
           <option name="timeStamp" value="12" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/scan.py</url>
-          <line>122</line>
+          <line>101</line>
           <option name="timeStamp" value="13" />
         </line-breakpoint>
       </breakpoints>

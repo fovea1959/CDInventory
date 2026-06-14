@@ -39,43 +39,19 @@
         <layout manager="grid">
           <property name="column">0</property>
           <property name="row">0</property>
-          <property name="sticky">nsew</property>
+          <property name="sticky">ew</property>
         </layout>
         <containerlayout manager="grid">
           <property name="propagate">false</property>
           <property type="col" id="0" name="weight">1</property>
-          <property type="row" id="0" name="weight">1</property>
+          <property type="col" id="1" name="weight">1</property>
         </containerlayout>
         <child>
-          <object class="ttk.Label" id="hello_world" named="True">
-            <property name="anchor">center</property>
-            <property name="font">{Classic Console} 26 {}</property>
-            <property name="foreground">#0000b8</property>
-            <property name="text" translatable="yes">Hello, World!</property>
+          <object class="ttk.Label" id="browsed_release_id" named="True">
+            <property name="background">#d99cb0</property>
             <layout manager="grid">
-              <property name="column">0</property>
-              <property name="columnspan">1</property>
+              <property name="column">1</property>
               <property name="row">0</property>
-              <property name="rowspan">1</property>
-              <property name="sticky">nsew</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="browser_url" named="True">
-            <property name="textvariable">string:label_url_text</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">1</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="scan_code" named="True">
-            <property name="text" translatable="yes">scan_code</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">4</property>
             </layout>
           </object>
         </child>
@@ -85,7 +61,56 @@
             <bind sequence="&lt;ButtonRelease&gt;" handler="cb_link_url_and_scan_code" add="" />
             <layout manager="grid">
               <property name="column">0</property>
+              <property name="columnspan">2</property>
               <property name="row">3</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="browsed_release_id_lb" named="True">
+            <property name="background">#d99cd9</property>
+            <property name="text" translatable="yes">Browsed release id</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">0</property>
+              <property name="sticky">ew</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="browsed_release_title_lb" named="True">
+            <property name="text" translatable="yes">Browsed title</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">1</property>
+              <property name="sticky">ew</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="browsed_release_artist_lb" named="True">
+            <property name="justify">right</property>
+            <property name="text" translatable="yes">Browsed artist</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">2</property>
+              <property name="sticky">e</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="browsed_release_title" named="True">
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="browsed_release_artist" named="True">
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="row">2</property>
             </layout>
           </object>
         </child>

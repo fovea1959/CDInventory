@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import json
 import logging
 import queue
 import sys
@@ -12,6 +13,9 @@ from playwright.sync_api import sync_playwright
 from playwright._impl._errors import TargetClosedError
 
 import utils
+from CDInventoryDao import DAO
+from CDInventoryEntities import CD, Location
+
 from scan_gui_generic_app import CDInventoryGenericApp
 
 
@@ -32,20 +36,25 @@ class Master:
         self.g = g
         self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue.Queue()
+        self.dao = DAO()
+        self.current_location: Location | None = None
+        self.current_release: dict | None = None
+        self.mb = utils.MB()
 
         self.thread = threading.Thread(target=self.run, daemon=True, name="master")
         self.thread.start()
 
     def run(self):
-        while not self.g.die:
-            try:
-                # Check the queue without blocking the main loop
-                f = self.queue.get(timeout=1)
-                f()
+        with self.dao:
+            while not self.g.die:
+                try:
+                    # Check the queue without blocking the main loop
+                    f = self.queue.get(timeout=1)
+                    f()
 
-            except queue.Empty:
-                # The queue was empty; do nothing
-                pass
+                except queue.Empty:
+                    # The queue was empty; do nothing
+                    pass
 
     def do(self, f):
         self.queue.put(f)
@@ -58,11 +67,56 @@ class Master:
     def receive_scan(self, barcode_type, barcode):
         self.logger.info("master received %s barcode: %s", barcode_type, barcode)
         self.check_thread()
+        if barcode_type == 'QRCODE':
+            ok = True
+            if barcode[0] == '{':
+                qrdata = json.loads(barcode)
+                if qrdata.get('type') == 'location':
+                    self.current_location = utils.save_location(self.dao, qrdata.get('id'), qrdata.get('description'))
+                else:
+                    ok = False
+            else:
+                ll = barcode.split(',')
+                if len(ll) < 2:
+                    ll.append('')
+                location_id, location_description = ll[:2]
+                self.current_location = utils.save_location(self.dao, location_id, location_description)
 
+            self._happy() if ok else self._sad()
+
+        elif barcode_type == 'EAN13':
+            self.current_release = self.mb.lookup_by_barcode(barcode)
+            if self.current_release is not None:
+                self.logger.info("musicbrainz had %s", self.current_release)
+                self._happy()
+            else:
+                self.logger.info("Unable to find barcode '%s' in musicbrainz", barcode)
+                self._sad()
+
+        elif barcode_type == 'CODE39':
+            # handled = check_and_handle_aliased_scan(g, barcode_type, barcode)
+            # if not handled:
+            #    self._sad()
+            pass
+
+        else:
+            # unknown barcode type
+            self._sad()
+
+        #                 utils.save_cd(self.dao, barcode, mb_release, self.current_location)
     def receive_url(self, url):
         self.logger.info("master received URL: %s", url)
         self.check_thread()
         self.g.gui.do(lambda: self.g.gui.label_url_text.set(url))
+
+    def _handle_location_scan(self, location_id, location_description):
+        self.current_location = utils.save_location(self.dao, location_id, location_description)
+
+    def _happy(self):
+        pass
+
+    def _sad(self):
+        pass
 
 
 class CVBarcodeReader:
@@ -122,7 +176,6 @@ class Browser:
     def run(self):
         while not self.g.die:
             with sync_playwright() as p:
-                # 1. Spawn a visible browser
                 browser = p.chromium.launch_persistent_context(user_data_dir="chromium_user_data", headless=False)
                 page = browser.new_page()
                 context = page.context
@@ -143,7 +196,6 @@ class Browser:
 
                 page_or_context.on("framenavigated", on_navigation)
 
-                # 4. Open the initial URL
                 self.logger.info(f"Spawning browser for: {self.start_url}")
                 try:
                     page.goto(self.start_url)

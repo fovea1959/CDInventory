@@ -7,9 +7,31 @@ import time
 
 import cv2
 import musicbrainzngs
+import soundfile as sf
+import sounddevice as sd
 
 from CDInventoryEntities import CD, Location
 from CDInventoryDao import DAO
+
+
+class Beeper:
+    def __init__(self):
+        self.stuff = {}
+        self.load('audio_data_ping.wav')
+        self.load('audio_data_error.wav')
+
+    def load(self, filename):
+        self.stuff[filename] = sf.read(filename)
+
+    def play(self, filename):
+        data, fs = self.stuff.get(filename)
+        sd.play(data, fs)
+
+    def happy(self):
+        self.play('audio_data_ping.wav')
+
+    def sad(self):
+        self.play('audio_data_error.wav')
 
 
 class MB:
@@ -65,8 +87,9 @@ class MB:
             release['artists'] = artists
         return release
 
+
 class BufferlesCvCapture:
-    def __init__(self, name : str = "/dev/video0", max_resolution: bool = False):
+    def __init__(self, name: str = "/dev/video0", max_resolution: bool = False):
         self.name = name
         self.should_run = True
         self.running = False
@@ -157,5 +180,3 @@ def save_location(dao: DAO, location_id, location_description):
     current_location.location_description = location_description.strip()
     dao.session.commit()
     return current_location
-
-
