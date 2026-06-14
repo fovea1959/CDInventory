@@ -288,7 +288,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781279853993</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="playright url changes are reflected in gui">
+      <option name="closed" value="true" />
+      <created>1781453972897</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1781453972897</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -311,7 +319,8 @@
     <MESSAGE value="prep to add CODE39" />
     <MESSAGE value="add CODE39. put json in qrcodes." />
     <MESSAGE value="playwright works" />
-    <option name="LAST_COMMIT_MESSAGE" value="playwright works" />
+    <MESSAGE value="playright url changes are reflected in gui" />
+    <option name="LAST_COMMIT_MESSAGE" value="playright url changes are reflected in gui" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
