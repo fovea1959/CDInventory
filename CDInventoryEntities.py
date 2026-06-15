@@ -53,7 +53,7 @@ class CD(Base):
     cd_musicbrainz_id: Mapped[Optional[str]] = mapped_column(Text, unique=True)
 
     cd_location_id: Mapped[Optional[str]] = mapped_column(ForeignKey("locations.location_id"), nullable=True)
-    cd_location: Mapped[Optional["Location"]] = relationship("Location", back_populates="location_contents")
+    cd_location: Mapped[Optional[Location]] = relationship("Location", back_populates="location_contents")
 
     def __repr__(self):
         return self._repr(

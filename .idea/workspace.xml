@@ -93,7 +93,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.CDInventoryDao">
+  <component name="RunManager" selected="Python.scan_gui_app">
     <configuration name="CDInventoryDao" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="CDInventory" />
       <option name="ENV_FILES" value="" />
@@ -214,8 +214,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.CDInventoryDao" />
         <item itemvalue="Python.scan_gui_app" />
+        <item itemvalue="Python.CDInventoryDao" />
         <item itemvalue="Python.scan" />
         <item itemvalue="Python.test_tkinter_threading" />
         <item itemvalue="Python.test_threaded_playwright" />
@@ -320,7 +320,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781468879144</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="gui works for browsing. cleaned up shutdown.">
+      <option name="closed" value="true" />
+      <created>1781538862874</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1781538862874</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -347,7 +355,8 @@
     <MESSAGE value="master task is working." />
     <MESSAGE value="barcodes are going to master task." />
     <MESSAGE value="save before hand editing ui" />
-    <option name="LAST_COMMIT_MESSAGE" value="save before hand editing ui" />
+    <MESSAGE value="gui works for browsing. cleaned up shutdown." />
+    <option name="LAST_COMMIT_MESSAGE" value="gui works for browsing. cleaned up shutdown." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -370,6 +379,11 @@
           <url>file://$PROJECT_DIR$/scan.py</url>
           <line>101</line>
           <option name="timeStamp" value="13" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/scan_gui_app.py</url>
+          <line>183</line>
+          <option name="timeStamp" value="14" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

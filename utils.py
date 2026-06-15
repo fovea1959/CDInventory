@@ -38,6 +38,7 @@ class MB:
     def __init__(self):
         musicbrainzngs.set_useragent("MyCDLookupApp", "0.1", "https://github.com")
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.DEBUG)
 
     def lookup_by_barcode(self, barcode: str = '') -> dict | None:
         query = f'barcode:"{barcode}"'

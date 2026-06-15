@@ -99,7 +99,7 @@ def main(argv):
                     elif barcode_type == 'EAN13':
                         handled = check_and_handle_aliased_scan(g, barcode_type, barcode)
                         if not handled:
-                            mb_release = g.mb.lookup_by_barcode(barcode)
+                                mb_release = g.mb.lookup_by_barcode(barcode)
                             if mb_release is not None:
                                 logging.info("musicbrainz had %s", mb_release)
                                 save_cd(g.dao, barcode, mb_release, g.current_location)

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import datetime
 import json
 import logging
 import queue
@@ -89,8 +90,9 @@ class Master:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue.Queue()
         self.dao = DAO()
-        self.current_location: Location | None = None
-        self.current_release: dict | None = None
+        self.selected_location: Location | None = None
+        self.selected_release: dict | None = None
+        self.current_cd: CD | None = None
         self.mb = utils.MB()
 
         self.thread = threading.Thread(target=self.run, daemon=True, name="master")
@@ -105,13 +107,18 @@ class Master:
                 try:
                     # Check the queue without blocking the main loop
                     f = self.queue.get(timeout=1)
-                    f()
+                    if f is None:
+                        self.logger.warning('got None from master queue')
+                    else:
+                        self.logger.info('got %s from master queue', f)
+                        f()
 
                 except queue.Empty:
                     # The queue was empty; do nothing
                     pass
 
     def _do(self, f):
+        self.logger.info('putting %s on the master queue', f)
         self.queue.put(f)
 
     def check_thread(self):
@@ -130,7 +137,7 @@ class Master:
             if barcode[0] == '{':
                 qrdata = json.loads(barcode)
                 if qrdata.get('type') == 'location':
-                    self.current_location = utils.save_location(self.dao, qrdata.get('id'), qrdata.get('description'))
+                    self._handle_location_barcode(qrdata.get('id'), qrdata.get('description'))
                 else:
                     ok = False
             else:
@@ -138,31 +145,75 @@ class Master:
                 if len(ll) < 2:
                     ll.append('')
                 location_id, location_description = ll[:2]
-                self.current_location = utils.save_location(self.dao, location_id, location_description)
+                self._handle_location_barcode(location_id, location_description)
 
             self.g.gui.happy() if ok else self.g.gui.sad()
 
         elif barcode_type == 'EAN13':
-            self.current_release = self.mb.lookup_by_barcode(barcode)
-            if self.current_release is not None:
-                self.logger.info("musicbrainz had %s", self.current_release)
-                self.g.gui.happy()
-            else:
-                self.logger.info("Unable to find barcode '%s' in musicbrainz", barcode)
-                self.g.gui.sad()
+            self._handle_cd_barcode(barcode)
 
         elif barcode_type == 'CODE39':
-            # handled = check_and_handle_aliased_scan(g, barcode_type, barcode)
-            # if not handled:
-            #    self._sad()
-            pass
+            self._handle_cd_barcode(barcode)
 
         else:
             # unknown barcode type
             self.g.gui.sad()
 
-        #                 utils.save_cd(self.dao, barcode, mb_release, self.current_location)
+    def update_current_cd_from_musicbrainz(self):
+        self._do(lambda: self._update_current_cd_from_musicbrainz())
+
+    def _update_current_cd_from_musicbrainz(self):
+        if self.current_cd is None or self.selected_release is None:
+            self.g.gui.sad()
+            return
+        self.current_cd.cd_musicbrainz_id = self.selected_release['id']
+        self.current_cd.cd_title = self.selected_release['title']
+        self.current_cd.cd_artists = ' / '.join(self.selected_release.get('artists', ''))
+
+        self.logger.info('CD before commit = %s', self.current_cd)
+        self.dao.session.commit()
+        self.logger.info('CD after commit = %s', self.current_cd)
+
+        self.g.gui.set_cd(self.current_cd)
+
+    def _handle_location_barcode(self, location_id, location_description):
+        self.selected_location = utils.save_location(self.dao, location_id, location_description)
+        self.g.gui.set_location(self.selected_location)
+
+    def _handle_cd_barcode(self, barcode):
+        self.current_cd = self.dao.get_cd_by_barcode(barcode)
+        if self.current_cd is None:
+            self.current_cd = CD()
+            self.current_cd.cd_barcode = barcode
+            self.dao.session.add(self.current_cd)
+
+        self.current_cd.cd_last_seen = datetime.datetime.now()
+
+        if self.selected_location is not None:
+            self.current_cd.cd_location_id = self.selected_location.location_id
+
+        if self.current_cd.cd_musicbrainz_id is not None:
+            self.selected_release = self.mb.lookup_by_release_id(self.current_cd.cd_musicbrainz_id)
+        else:
+            self.selected_release = self.mb.lookup_by_barcode(barcode)
+
+        self.g.gui.set_musicbrainz_release(self.selected_release)
+
+        if self.selected_release is not None:
+            self.logger.info("musicbrainz had %s", self.selected_release)
+            self._update_current_cd_from_musicbrainz()
+            self.g.gui.happy()
+        else:
+            self.logger.info("Unable to find barcode '%s' in musicbrainz", barcode)
+            self.g.gui.sad()
+
+        self.dao.session.commit()
+        self.g.gui.set_cd(self.current_cd)
+
     def receive_url(self, url):
+        self._do(lambda: self._receive_url(url))
+
+    def _receive_url(self, url):
         self.logger.info("master received URL: %s", url)
         self.check_thread()
 
@@ -172,14 +223,12 @@ class Master:
         if m:
             release_id = m.group(1)
             searching_release = {'id': '* searching *'}
-            self.g.gui.set_active_release(searching_release)
-            self.g.gui.set_browsed_release(searching_release)
-            self.current_release = self.g.mb.lookup_by_release_id(release_id)
-            self.g.gui.set_active_release(self.current_release)
-            self.g.gui.set_browsed_release(self.current_release)
+            self.g.gui.set_musicbrainz_release(searching_release)
+            self.selected_release = self.g.mb.lookup_by_release_id(release_id)
+            self.g.gui.set_musicbrainz_release(self.selected_release)
 
     def _handle_location_scan(self, location_id, location_description):
-        self.current_location = utils.save_location(self.dao, location_id, location_description)
+        self.selected_location = utils.save_location(self.dao, location_id, location_description)
 
 
 class CVBarcodeReader:
@@ -234,16 +283,17 @@ class CVBarcodeReader:
 
 
 class CDInventoryApp(CDInventoryGenericApp):
-    TV_BROWSED_RELEASE_ID = 'tv_browsed_release_id'
-    TV_BROWSED_RELEASE_TITLE = 'tv_browsed_release_title'
-    TV_BROWSED_RELEASE_ARTIST = 'tv_browsed_release_artist'
-    TV_SCANNED_RELEASE_ID = 'tv_scanned_release_id'
-    TV_SCANNED_RELEASE_TITLE = 'tv_scanned_release_title'
-    TV_SCANNED_RELEASE_ARTIST = 'tv_scanned_release_artist'
-    TV_ACTIVE_RELEASE_ID = 'tv_active_release_id'
-    TV_ACTIVE_RELEASE_TITLE = 'tv_active_release_title'
-    TV_ACTIVE_RELEASE_ARTIST = 'tv_active_release_artist'
-    TV_BARCODE = 'tv_barcode'
+    TV_MUSICBRAINZ_RELEASE_ID = 'tv_musicbrainz_release_id'
+    TV_MUSICBRAINZ_RELEASE_TITLE = 'tv_musicbrainz_release_title'
+    TV_MUSICBRAINZ_RELEASE_ARTIST = 'tv_musicbrainz_release_artist'
+    TV_CD_BARCODE = 'tv_cd_barcode'
+    TV_CD_LOCATION_ID = 'tv_cd_location_id'
+    TV_CD_LOCATION = 'tv_cd_location'
+    TV_CD_RELEASE_ID = 'tv_cd_release_id'
+    TV_CD_RELEASE_TITLE = 'tv_cd_release_title'
+    TV_CD_RELEASE_ARTIST = 'tv_cd_release_artist'
+    TV_LOCATION = 'tv_location'
+    TV_LOCATION_ID = 'tv_location_id'
 
     def __init__(self, master=None, g: G = None):
         super().__init__(master)
@@ -253,8 +303,9 @@ class CDInventoryApp(CDInventoryGenericApp):
 
         self.logger.info("__init__ successful")
 
-    def cb_link_url_and_scan_code(self, event=None):
+    def cb_tie_release_to_cd(self, event=None):
         self.logger.info('bloop!')
+        self.g.master.update_current_cd_from_musicbrainz()
 
     def set_text_field(self, name, value):
         self.mainwindow.after(0, lambda: self._set_text_field(name, value))
@@ -263,25 +314,42 @@ class CDInventoryApp(CDInventoryGenericApp):
         string_var = self.builder.get_variable(name)
         string_var.set(value)
         
-    def set_active_release(self, release: dict | None = None):
-        if release is None:
-            self.set_text_field(self.TV_ACTIVE_RELEASE_ID, '')
-            self.set_text_field(self.TV_ACTIVE_RELEASE_TITLE, '')
-            self.set_text_field(self.TV_ACTIVE_RELEASE_ARTIST, '')
+    def set_location(self, location: Location | None = None):
+        if location is None:
+            self.set_text_field(self.TV_LOCATION_ID, '')
+            self.set_text_field(self.TV_LOCATION, '')
         else:
-            self.set_text_field(self.TV_ACTIVE_RELEASE_ID, release.get('id'))
-            self.set_text_field(self.TV_ACTIVE_RELEASE_TITLE, release.get('title'))
-            self.set_text_field(self.TV_ACTIVE_RELEASE_ARTIST, release.get('artists'))
+            self.set_text_field(self.TV_LOCATION_ID, location.location_id)
+            self.set_text_field(self.TV_LOCATION, location.location_description)
 
-    def set_browsed_release(self, release: dict | None = None):
-        if release is None:
-            self.set_text_field(self.TV_BROWSED_RELEASE_ID, '')
-            self.set_text_field(self.TV_BROWSED_RELEASE_TITLE, '')
-            self.set_text_field(self.TV_BROWSED_RELEASE_ARTIST, '')
+    def set_cd(self, cd: CD | None = None):
+        if cd is None:
+            self.set_text_field(self.TV_CD_BARCODE, '')
+            self.set_text_field(self.TV_CD_RELEASE_ID, '')
+            self.set_text_field(self.TV_CD_RELEASE_TITLE, '')
+            self.set_text_field(self.TV_CD_RELEASE_ARTIST, '')
+            self.set_text_field(self.TV_CD_LOCATION_ID, '')
+            self.set_text_field(self.TV_CD_LOCATION, '')
         else:
-            self.set_text_field(self.TV_BROWSED_RELEASE_ID, release.get('id'))
-            self.set_text_field(self.TV_BROWSED_RELEASE_TITLE, release.get('title'))
-            self.set_text_field(self.TV_BROWSED_RELEASE_ARTIST, release.get('artists'))
+            self.set_text_field(self.TV_CD_BARCODE, cd.cd_barcode)
+            self.set_text_field(self.TV_CD_RELEASE_ID, cd.cd_musicbrainz_id or '')
+            self.set_text_field(self.TV_CD_RELEASE_TITLE, cd.cd_title or '')
+            self.set_text_field(self.TV_CD_RELEASE_ARTIST, cd.cd_artists or '')
+            self.set_text_field(self.TV_CD_LOCATION_ID, cd.cd_location_id or '')
+            if cd.cd_location is not None:
+                self.set_text_field(self.TV_CD_LOCATION, cd.cd_location.location_description or '')
+            else:
+                self.set_text_field(self.TV_CD_LOCATION, '')
+
+    def set_musicbrainz_release(self, release: dict | None = None):
+        if release is None:
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ID, '')
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_TITLE, '')
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ARTIST, '')
+        else:
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ID, release.get('id'))
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_TITLE, release.get('title'))
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ARTIST, release.get('artists'))
 
     def happy(self):
         pass
@@ -319,5 +387,6 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stderr)
+    logging.basicConfig(level=logging.INFO, stream=sys.stderr,
+                        format="%(asctime)s [%(levelname)s] (%(threadName)s) %(message)s")
     main(sys.argv[1:])

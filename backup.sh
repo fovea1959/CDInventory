@@ -13,7 +13,7 @@ TABLES=$(sqlite3 "$DB_FILE" "SELECT name FROM sqlite_master WHERE type='table' A
 # Loop through each table and extract rows as INSERT statements
 for TABLE in $TABLES; do
     echo "Backing up data from table: $TABLE"
-    sqlite3 "$DB_FILE" ".mode insert $TABLE" "SELECT * FROM $TABLE;" >> "$OUTPUT_FILE"
+    sqlite3 "$DB_FILE" ".mode insert $TABLE" ".headers on" "SELECT * FROM $TABLE;" >> "$OUTPUT_FILE"
 done
 
 echo "Backup complete! Saved to $OUTPUT_FILE"

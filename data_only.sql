@@ -1,0 +1,3 @@
+INSERT INTO locations(location_id,location_description) VALUES('972a8469-1641-4f82-8b9d-2434e465e150','Storage Bag 4');
+INSERT INTO cds(cd_id,cd_barcode,cd_title,cd_artists,cd_last_seen,cd_musicbrainz_id,cd_location_id) VALUES(1,'0823564682921','The Complete Albums Collection 1956-1957','Kenny Burrell','2026-06-15 16:42:37.510709','2e032098-810f-4eb4-b282-7d04be6791ed','972a8469-1641-4f82-8b9d-2434e465e150');
+INSERT INTO cds(cd_id,cd_barcode,cd_title,cd_artists,cd_last_seen,cd_musicbrainz_id,cd_location_id) VALUES(2,'0823564683027','The Complete Albums Collection 1957-1962','Kenny Burrell','2026-06-15 16:38:51.485144','8812c372-82b2-4c9b-a506-0ffedd0461c7',NULL);

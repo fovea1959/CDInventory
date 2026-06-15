@@ -1,0 +1,72 @@
+{
+  'id': '2e032098-810f-4eb4-b282-7d04be6791ed',
+  'ext:score': '100',
+  'title': 'The Complete Albums Collection 1956-1957',
+  'packaging': 'Box',
+  'artist-credit': [
+    {
+      'name': 'Kenny Burrell',
+      'artist': {
+        'id': 'a85b66d2-34df-4d5a-8c0d-d585b8a14ce1',
+        'name': 'Kenny Burrell',
+        'sort-name': 'Burrell, Kenny'
+      }
+    }
+  ],
+  'release-group': {
+    'id': 'fe49ad58-c965-4708-97d4-32645b63595b',
+    'type': 'Compilation',
+    'title': 'The Complete Albums Collection 1956-1957',
+    'primary-type': 'Album',
+    'secondary-type-list': [
+      'Compilation'
+    ]
+  },
+  'barcode': '823564682921',
+  'label-info-list': [
+    {
+      'catalog-number': 'EN4CD9091',
+      'label': {
+        'id': '595a1658-99bf-47a1-b201-df1485bb8136',
+        'name': 'Enlightenment'
+      }
+    }
+  ],
+  'medium-list': [
+    {
+      'format': 'CD',
+      'disc-list': [],
+      'disc-count': 1,
+      'track-list': [],
+      'track-count': 14
+    },
+    {
+      'format': 'CD',
+      'disc-list': [],
+      'disc-count': 1,
+      'track-list': [],
+      'track-count': 13
+    },
+    {
+      'format': 'CD',
+      'disc-list': [],
+      'disc-count': 1,
+      'track-list': [],
+      'track-count': 8
+    },
+    {
+      'format': 'CD',
+      'disc-list': [],
+      'disc-count': 1,
+      'track-list': [],
+      'track-count': 10
+    }
+  ],
+  'medium-track-count': 45,
+  'medium-count': 4,
+  'tag-list': [],
+  'artist-credit-phrase': 'Kenny Burrell',
+  'artists': [
+    'Kenny Burrell'
+  ]
+}
