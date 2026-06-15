@@ -2,7 +2,9 @@
 
 # Configuration
 DB_FILE="CDInventory.db"
-OUTPUT_FILE="data_only.sql"
+
+TS=$(date +%Y%m%d-%H%M%S)
+OUTPUT_FILE="${DB_FILE}_${TS}_data_only.sql"
 
 # Clear any existing backup file
 > "$OUTPUT_FILE"
@@ -16,5 +18,11 @@ for TABLE in $TABLES; do
     sqlite3 "$DB_FILE" ".mode insert $TABLE" "SELECT * FROM $TABLE;" >> "$OUTPUT_FILE"
 done
 
-echo "Backup complete! Saved to $OUTPUT_FILE"
+echo "Data only backup complete! Saved to $OUTPUT_FILE"
+
+OUTPUT_FILE="${DB_FILE}_${TS}_full.sql"
+
+sqlite3 "$DB_FILE" .dump > "$OUTPUT_FILE"
+
+echo "Full backup complete! Saved to $OUTPUT_FILE"
 

@@ -31,9 +31,10 @@ class DAO:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
             self.logger.error(f"An error occurred: {exc_val}")
-        self.session.rollback()
-        self.session = None
-        return False  # Returning True suppress
+            self.session.rollback()
+            self.session = None
+            return False  # Returning True suppress
+        return True
 
     def get_location(self, location_id : str = '') -> Optional[Location]:
         query = sqlalchemy.select(Location).where(Location.location_id == location_id)

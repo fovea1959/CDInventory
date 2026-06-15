@@ -16,10 +16,14 @@ import pyzbar.pyzbar
 import soundfile as sf
 import sounddevice as sd
 
+from PIL import Image, ImageDraw
+
 import CDInventoryDao
 
 from CDInventoryEntities import CD, Location
 
+
+save_funny_scans = True
 
 class Beeper:
     def __init__(self):
@@ -34,10 +38,10 @@ class Beeper:
         data, fs = self.stuff.get(filename)
         sd.play(data, fs)
 
-    def happy(self):
+    def happy(self) -> None:
         self.play('audio_data_ping.wav')
 
-    def sad(self):
+    def sad(self) -> None:
         self.play('audio_data_error.wav')
 
 
@@ -49,7 +53,7 @@ class G:
         self.beeper = Beeper()
 
 
-class BufferlesCvCapture:
+class BufferlessCvCapture:
     def __init__(self, name : str = "/dev/video0", max_resolution: bool = False):
         self.name = name
         self.should_run = True
@@ -120,11 +124,10 @@ class MB:
 
         if len(barcode) == 13:
             query = query + f' OR barcode:"{barcode[:12]}"'
+            query = query + f' OR barcode:"{barcode[1:12]}"'
 
         if barcode[0] == '0':
             query = query + f' OR barcode:"{barcode[1:]}"'
-
-        # query = query + f' OR barcode:"5017261210685"'
 
         logging.info("query = '%s'", query)
 
@@ -213,6 +216,55 @@ def check_and_handle_aliased_scan(g : G, barcode_type : str = '', barcode : str 
     return True
 
 
+def save_funny_scan(frame, zbar):
+    if not save_funny_scans:
+        return
+    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    ts = datetime.datetime.now().astimezone().isoformat()
+
+    with open(f'funny_scan_{ts}.json', 'w') as f:
+        json.dump(zbar, f, default=str)
+
+    image = Image.fromarray(rgb_image)
+
+    fn = f'funny_scan_{ts}.png'
+    image.save(fn)
+    logging.info('saved %s', fn)
+
+    draw = ImageDraw.Draw(image)
+    width = 3
+    for barcode in zbar:
+        rect = barcode.rect
+        rect_coordinates = (
+            (rect.left, rect.top),
+            (rect.left + rect.width, rect.top + rect.height)
+        )
+        logging.info("rectangle = %s", rect_coordinates)
+        draw.rectangle(rect_coordinates, outline='red', width=width)
+
+        polygon = barcode.polygon
+        logging.info("polygon = %s", barcode.polygon)
+
+        if len(barcode.polygon) > 1:
+            draw.polygon(barcode.polygon, outline='red')
+        else:
+            x, y = polygon[0]
+            gap = 20
+            length = 100
+            color = "red"
+
+            # Draw Vertical Line (top and bottom parts)
+            draw.line([(x, y - length), (x, y - gap)], fill=color, width=width)
+            draw.line([(x, y + gap), (x, y + length)], fill=color, width=width)
+
+            # Draw Horizontal Line (left and right parts)
+            draw.line([(x - length, y), (x - gap, y)], fill=color, width=width)
+            draw.line([(x + gap, y), (x + length, y)], fill=color, width=width)
+
+    fn = f'funny_scan_{ts}_marked.png'
+    image.save(fn)
+
+
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--camera', default='/dev/video0')
@@ -225,9 +277,7 @@ def main(argv):
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    barcode_store = {}  # BarcodeStore()
-
-    cam = BufferlesCvCapture(args.camera)
+    cam = BufferlessCvCapture(args.camera)
 
     g = G()
     g.mb = MB()
@@ -237,6 +287,7 @@ def main(argv):
         g.dao = dao
         shape = None
         last_data = None
+        last_scan_time = 0
         while True:
             # Read frame
             frame = cam.read()
@@ -252,7 +303,9 @@ def main(argv):
             zbar = pyzbar.pyzbar.decode(gray)
             if len(zbar) > 0:
                 d = zbar[0].data
-                if d != last_data:
+                now = time.time()
+                if d != last_data or (now - last_scan_time) > 2:
+                    last_scan_time = now
                     last_data = d
                     barcode = d.decode()
                     barcode_type = zbar[0].type
@@ -277,6 +330,7 @@ def main(argv):
 
                     elif barcode_type == 'EAN13':
                         handled = check_and_handle_aliased_scan(g, barcode_type, barcode)
+                        save_funny_scan(frame, zbar)
                         if not handled:
                             mb_release = g.mb.lookup_by_barcode(barcode)
                             if mb_release is not None:
@@ -290,10 +344,15 @@ def main(argv):
                     elif barcode_type == 'CODE39':
                         handled = check_and_handle_aliased_scan(g, barcode_type, barcode)
                         if not handled:
+                            save_funny_scan(frame, zbar)
                             g.beeper.sad()
+
+                    elif barcode_type == 'CODE128':
+                        save_funny_scan(frame, zbar)
 
                     else:
                         # unknown barcode type
+                        save_funny_scan(frame, zbar)
                         g.beeper.sad()
 
             # Exit with 'q'

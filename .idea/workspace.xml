@@ -4,12 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b3ee3238-58c9-4892-8606-54e6dd3dccbd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/CDInventory.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/CDInventory.iml" afterDir="false" />
+    <list default="true" id="b3ee3238-58c9-4892-8606-54e6dd3dccbd" name="Changes" comment="pass a global structure around">
+      <change afterPath="$PROJECT_DIR$/make_cd_barcodes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_playwright.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CDInventoryDao.py" beforeDir="false" afterPath="$PROJECT_DIR$/CDInventoryDao.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup.sh" beforeDir="false" afterPath="$PROJECT_DIR$/backup.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scan.py" beforeDir="false" afterPath="$PROJECT_DIR$/scan.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -46,6 +47,7 @@
     "Python.CDInventoryEntities.executor": "Run",
     "Python.DiskTrackerEntitiesLoad.executor": "Run",
     "Python.make_barcodes.pickle.executor": "Run",
+    "Python.make_cd_barcodes.executor": "Run",
     "Python.make_location_qrcodes.executor": "Run",
     "Python.mb_count_release.executor": "Run",
     "Python.scan.executor": "Run",
@@ -56,14 +58,15 @@
     "Python.test_mb_extract.executor": "Run",
     "Python.test_musicbrainz.executor": "Run",
     "Python.test_opencv.executor": "Run",
+    "Python.test_playwright.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "/maxtor250_l/home/wegscd/CDInventory/requirements.txt",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/maxtor250_l/home/wegscd/CDInventory",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyIntegratedToolsModulesConfigurable",
     "vue.rearranger.settings.migration": "true"
@@ -81,8 +84,8 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.scan">
-    <configuration name="CDInventoryDao" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.test_playwright">
+    <configuration name="make_cd_barcodes" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="CDInventory" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -95,10 +98,10 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="DEBUG_JUST_MY_CODE" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="false" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/CDInventoryDao.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/make_cd_barcodes.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -157,31 +160,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_musicbrainz" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="CDInventory" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="DEBUG_JUST_MY_CODE" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_musicbrainz.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="test_opencv" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="CDInventory" />
       <option name="ENV_FILES" value="" />
@@ -195,7 +173,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="DEBUG_JUST_MY_CODE" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="false" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_opencv.py" />
@@ -207,20 +185,45 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="test_playwright" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="CDInventory" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_playwright.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <list>
-      <item itemvalue="Python.CDInventoryDao" />
+      <item itemvalue="Python.test_playwright" />
+      <item itemvalue="Python.make_cd_barcodes" />
       <item itemvalue="Python.test_opencv" />
-      <item itemvalue="Python.test_musicbrainz" />
       <item itemvalue="Python.make_location_qrcodes" />
       <item itemvalue="Python.scan" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.test_playwright" />
         <item itemvalue="Python.scan" />
-        <item itemvalue="Python.make_location_qrcodes" />
-        <item itemvalue="Python.CDInventoryDao" />
-        <item itemvalue="Python.test_musicbrainz" />
+        <item itemvalue="Python.make_cd_barcodes" />
         <item itemvalue="Python.test_opencv" />
+        <item itemvalue="Python.make_location_qrcodes" />
       </list>
     </recent_temporary>
   </component>
@@ -240,7 +243,8 @@
       <option name="presentableId" value="Default" />
       <updated>1775146599627</updated>
       <workItem from="1781106696484" duration="174000" />
-      <workItem from="1781106887182" duration="11096000" />
+      <workItem from="1781106887182" duration="32358000" />
+      <workItem from="1781229767466" duration="1423000" />
     </task>
     <task id="LOCAL-00001" summary="scan.py can handle location scans.">
       <option name="closed" value="true" />
@@ -282,7 +286,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781039135371</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="pass a global structure around">
+      <option name="closed" value="true" />
+      <created>1781124792909</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1781124792909</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -304,7 +316,8 @@
     <MESSAGE value="we can scan locations and bar codes and save them to database!" />
     <MESSAGE value="prep to add CODE39" />
     <MESSAGE value="add CODE39. put json in qrcodes." />
-    <option name="LAST_COMMIT_MESSAGE" value="add CODE39. put json in qrcodes." />
+    <MESSAGE value="pass a global structure around" />
+    <option name="LAST_COMMIT_MESSAGE" value="pass a global structure around" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -320,23 +333,17 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/scan.py</url>
-          <line>152</line>
+          <line>155</line>
           <option name="timeStamp" value="9" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/scan.py</url>
-          <line>257</line>
-          <option name="timeStamp" value="12" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/scan.py</url>
-          <line>280</line>
-          <option name="timeStamp" value="13" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/CDInventory$scan.coverage" NAME="scan Coverage Results" MODIFIED="1781114786579" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/CDInventory$make_location_qrcodes.coverage" NAME="make_location_qrcodes Coverage Results" MODIFIED="1781227017695" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/CDInventory$make_cd_barcodes.coverage" NAME="make_cd_barcodes Coverage Results" MODIFIED="1781228363152" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/CDInventory$test_playwright.coverage" NAME="test_playwright Coverage Results" MODIFIED="1781230250189" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/CDInventory$scan.coverage" NAME="scan Coverage Results" MODIFIED="1781229169246" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/CDInventory$test_opencv.coverage" NAME="test_opencv Coverage Results" MODIFIED="1781227974500" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
