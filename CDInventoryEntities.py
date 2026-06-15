@@ -45,15 +45,15 @@ class CD(Base):
     __tablename__ = 'cds'
 
     cd_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cd_barcode: Mapped[Optional[str]] = mapped_column(Text, unique=True)
+    cd_barcode: Mapped[str] = mapped_column(Text, unique=True)
     cd_title: Mapped[Optional[str]] = mapped_column(Text)
     cd_artists: Mapped[Optional[str]] = mapped_column(Text)
-    cd_last_seen: Mapped[datetime.datetime] = mapped_column(DateTime)
+    cd_last_seen: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
 
     cd_musicbrainz_id: Mapped[Optional[str]] = mapped_column(Text, unique=True)
 
-    cd_location_id = mapped_column(ForeignKey("locations.location_id"))
-    cd_location: Mapped["Location"] = relationship("Location", back_populates="location_contents")
+    cd_location_id: Mapped[Optional[str]] = mapped_column(ForeignKey("locations.location_id"), nullable=True)
+    cd_location: Mapped[Optional["Location"]] = relationship("Location", back_populates="location_contents")
 
     def __repr__(self):
         return self._repr(
@@ -61,7 +61,7 @@ class CD(Base):
             barcode=self.cd_barcode,
             title=self.cd_title,
             artist=self.cd_artists,
-            location_id = self.cd_location_id
+            location_id=self.cd_location_id
         )
 
 

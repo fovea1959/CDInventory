@@ -90,6 +90,7 @@ class MB:
 
 class BufferlesCvCapture:
     def __init__(self, name: str = "/dev/video0", max_resolution: bool = False):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.name = name
         self.should_run = True
         self.running = False
@@ -119,23 +120,26 @@ class BufferlesCvCapture:
         logging.info(f"Resolution: {max_w}x{max_h}")
 
         self.q = queue.Queue()
-        t = threading.Thread(target=self._reader, daemon=True, name="Camera")
-        t.start()
+        self.thread = threading.Thread(target=self._reader, name="Camera")   # not a Daemon!
+        self.thread.start()
 
     # read frames as soon as they are available, keeping only most recent one
     def _reader(self):
         self.running = True
-        while self.should_run:
-            ret, frame = self.cap.read()
-            if not ret:
-                raise Exception("Could not read frame.")
-            if not self.q.empty():
-                try:
-                    self.q.get_nowait()  # discard previous (unprocessed) frame
-                except queue.Empty:
-                    pass
-            self.q.put(frame)
-        self.running = False
+        try:
+            while self.should_run:
+                ret, frame = self.cap.read()
+                if not ret:
+                    raise Exception("Could not read frame.")
+                if not self.q.empty():
+                    try:
+                        self.q.get_nowait()  # discard previous (unprocessed) frame
+                    except queue.Empty:
+                        pass
+                self.q.put(frame)
+        finally:
+            self.cap.release()
+            self.running = False
 
     def read(self):
         im = self.q.get()
@@ -143,9 +147,7 @@ class BufferlesCvCapture:
 
     def release(self):
         self.should_run = False
-        while self.running:
-            time.sleep(0.1)
-        self.cap.release()
+        self.thread.join()
 
 
 def save_cd(dao: DAO, barcode, mb_cd, current_location):
