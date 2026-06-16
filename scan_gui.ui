@@ -25,351 +25,369 @@
   </project>
   <object class="tk.Tk" id="tk1">
     <property name="background">#86d9d9</property>
-    <property name="height">240</property>
+    <property name="height">600</property>
     <property name="title" translatable="yes">CD Inventory</property>
-    <property name="width">640</property>
+    <property name="width">800</property>
     <containerlayout manager="grid">
       <property type="col" id="0" name="weight">0</property>
       <property type="col" id="1" name="weight">1</property>
+      <property type="row" id="2" name="weight">1</property>
     </containerlayout>
     <child>
-      <object class="ttk.Labelframe" id="location_frame" named="True">
+      <object class="ttk.Frame" id="form_frame" named="True">
         <property name="height">200</property>
-        <property name="text" translatable="yes">Location</property>
         <property name="width">200</property>
         <layout manager="grid">
           <property name="column">0</property>
           <property name="row">0</property>
-          <property name="sticky">ns</property>
         </layout>
-        <containerlayout manager="grid">
-          <property type="col" id="1" name="minsize">200</property>
-        </containerlayout>
         <child>
-          <object class="ttk.Label" id="label1">
-            <property name="text" translatable="yes"> </property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">0</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="location_id_lb" named="True">
-            <property name="text" translatable="yes">Location id</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">1</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="location_id" named="True">
-            <property name="textvariable">string:tv_location_id</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">1</property>
-              <property name="sticky">w</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="location_lb" named="True">
+          <object class="ttk.Labelframe" id="location_frame" named="True">
+            <property name="height">200</property>
             <property name="text" translatable="yes">Location</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">2</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="location" named="True">
-            <property name="textvariable">string:tv_location</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">2</property>
-              <property name="sticky">w</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Button" id="button1">
-            <property name="text" translatable="yes">Clear Location</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="columnspan">2</property>
-              <property name="row">3</property>
-            </layout>
-          </object>
-        </child>
-      </object>
-    </child>
-    <child>
-      <object class="ttk.Labelframe" id="cd_frame" named="True">
-        <property name="height">200</property>
-        <property name="text" translatable="yes">CD</property>
-        <property name="width">200</property>
-        <layout manager="grid">
-          <property name="column">2</property>
-          <property name="row">0</property>
-          <property name="sticky">ns</property>
-        </layout>
-        <containerlayout manager="grid">
-          <property type="col" id="1" name="minsize">200</property>
-        </containerlayout>
-        <child>
-          <object class="ttk.Label" id="cd_barcode_lb" named="True">
-            <property name="text" translatable="yes">Barcode</property>
+            <property name="width">200</property>
             <layout manager="grid">
               <property name="column">0</property>
               <property name="row">0</property>
-              <property name="sticky">e</property>
+              <property name="sticky">ns</property>
             </layout>
+            <containerlayout manager="grid">
+              <property type="col" id="1" name="minsize">200</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="label1">
+                <property name="text" translatable="yes"> </property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="location_id_lb" named="True">
+                <property name="text" translatable="yes">Location id</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">1</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="location_id" named="True">
+                <property name="textvariable">string:tv_location_id</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">1</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="location_lb" named="True">
+                <property name="text" translatable="yes">Location</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">2</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="location" named="True">
+                <property name="textvariable">string:tv_location</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">2</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="button1">
+                <property name="text" translatable="yes">Clear Location</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="columnspan">2</property>
+                  <property name="row">3</property>
+                </layout>
+              </object>
+            </child>
           </object>
         </child>
         <child>
-          <object class="ttk.Label" id="cd_barcode" named="True">
-            <property name="textvariable">string:tv_cd_barcode</property>
+          <object class="ttk.Labelframe" id="cd_frame" named="True">
+            <property name="height">200</property>
+            <property name="text" translatable="yes">CD</property>
+            <property name="width">200</property>
             <layout manager="grid">
-              <property name="column">1</property>
+              <property name="column">2</property>
               <property name="row">0</property>
-              <property name="sticky">w</property>
+              <property name="sticky">ns</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property type="col" id="1" name="minsize">200</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="cd_barcode_lb" named="True">
+                <property name="text" translatable="yes">Barcode</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">0</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_barcode" named="True">
+                <property name="textvariable">string:tv_cd_barcode</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">0</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_location_id_lb" named="True">
+                <property name="text" translatable="yes">Location id</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">2</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_location_id" named="True">
+                <property name="textvariable">string:tv_cd_location_id</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">2</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_location_lb" named="True">
+                <property name="text" translatable="yes">Location</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">3</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_location" named="True">
+                <property name="text" translatable="yes">label6</property>
+                <property name="textvariable">string:tv_cd_location</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">3</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_release_id_lb" named="True">
+                <property name="background">#d99cd9</property>
+                <property name="text" translatable="yes">Release id</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">5</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_release_id" named="True">
+                <property name="background">#d99cb0</property>
+                <property name="textvariable">string:tv_cd_release_id</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">5</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_release_title_lb" named="True">
+                <property name="text" translatable="yes">Title</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">6</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_release_title" named="True">
+                <property name="textvariable">string:tv_cd_release_title</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">6</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_release_artist_lb" named="True">
+                <property name="justify">right</property>
+                <property name="text" translatable="yes">Artist</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">7</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="cd_release_artist" named="True">
+                <property name="textvariable">string:tv_cd_release_artist</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">7</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="button2" named="True">
+            <property name="command" type="command" cbtype="simple">cb_tie_release_to_cd</property>
+            <property name="text" translatable="yes">&lt;&lt;</property>
+            <bind sequence="&lt;ButtonRelease&gt;" handler="cb_link_url_and_scan_code" add="" />
+            <layout manager="grid">
+              <property name="column">3</property>
+              <property name="row">0</property>
             </layout>
           </object>
         </child>
         <child>
-          <object class="ttk.Label" id="cd_location_id_lb" named="True">
-            <property name="text" translatable="yes">Location id</property>
+          <object class="ttk.Labelframe" id="musicbrainz_frame" named="True">
+            <property name="height">200</property>
+            <property name="text" translatable="yes">Musicbrainz</property>
+            <property name="width">200</property>
             <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">2</property>
-              <property name="sticky">e</property>
+              <property name="column">4</property>
+              <property name="row">0</property>
+              <property name="sticky">ns</property>
             </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_location_id" named="True">
-            <property name="textvariable">string:tv_cd_location_id</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">2</property>
-              <property name="sticky">w</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_location_lb" named="True">
-            <property name="text" translatable="yes">Location</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">3</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_location" named="True">
-            <property name="text" translatable="yes">label6</property>
-            <property name="textvariable">string:tv_cd_location</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">3</property>
-              <property name="sticky">w</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_release_id_lb" named="True">
-            <property name="background">#d99cd9</property>
-            <property name="text" translatable="yes">Release id</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">5</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_release_id" named="True">
-            <property name="background">#d99cb0</property>
-            <property name="textvariable">string:tv_cd_release_id</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">5</property>
-              <property name="sticky">w</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_release_title_lb" named="True">
-            <property name="text" translatable="yes">Title</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">6</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_release_title" named="True">
-            <property name="textvariable">string:tv_cd_release_title</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">6</property>
-              <property name="sticky">w</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_release_artist_lb" named="True">
-            <property name="justify">right</property>
-            <property name="text" translatable="yes">Artist</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">7</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="cd_release_artist" named="True">
-            <property name="textvariable">string:tv_cd_release_artist</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">7</property>
-              <property name="sticky">w</property>
-            </layout>
+            <containerlayout manager="grid">
+              <property type="col" id="1" name="minsize">200</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="label2">
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="label3">
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">1</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="label4">
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">2</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="musicbrainz_release_id_lb" named="True">
+                <property name="background">#d99cd9</property>
+                <property name="text" translatable="yes">Release id</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">3</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="musicbrainz_release_id" named="True">
+                <property name="background">#d99cb0</property>
+                <property name="textvariable">string:tv_musicbrainz_release_id</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">3</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="musicbrainz_release_title_lb" named="True">
+                <property name="text" translatable="yes">Title</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">4</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="musicbrainz_release_title" named="True">
+                <property name="textvariable">string:tv_musicbrainz_release_title</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">4</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="musicbrainz_release_artist_lb" named="True">
+                <property name="justify">right</property>
+                <property name="text" translatable="yes">Artist</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="row">5</property>
+                  <property name="sticky">e</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="musicbrainz_release_artist" named="True">
+                <property name="textvariable">string:tv_musicbrainz_release_artist</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">5</property>
+                </layout>
+              </object>
+            </child>
           </object>
         </child>
       </object>
     </child>
     <child>
-      <object class="ttk.Button" id="button2" named="True">
-        <property name="command" type="command" cbtype="simple">cb_tie_release_to_cd</property>
-        <property name="text" translatable="yes">&lt;&lt;</property>
-        <bind sequence="&lt;ButtonRelease&gt;" handler="cb_link_url_and_scan_code" add="" />
+      <object class="ttk.Separator" id="separator1">
+        <property name="orient">horizontal</property>
         <layout manager="grid">
-          <property name="column">3</property>
-          <property name="row">0</property>
+          <property name="column">0</property>
+          <property name="row">1</property>
         </layout>
       </object>
     </child>
     <child>
-      <object class="ttk.Labelframe" id="musicbrainz_frame" named="True">
-        <property name="height">200</property>
-        <property name="text" translatable="yes">Musicbrainz</property>
-        <property name="width">200</property>
-        <layout manager="grid">
-          <property name="column">4</property>
-          <property name="row">0</property>
-          <property name="sticky">ns</property>
-        </layout>
-        <containerlayout manager="grid">
-          <property type="col" id="1" name="minsize">200</property>
-        </containerlayout>
-        <child>
-          <object class="ttk.Label" id="label2">
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">0</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="label3">
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">1</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="label4">
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">2</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="musicbrainz_release_id_lb" named="True">
-            <property name="background">#d99cd9</property>
-            <property name="text" translatable="yes">Release id</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">3</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="musicbrainz_release_id" named="True">
-            <property name="background">#d99cb0</property>
-            <property name="textvariable">string:tv_musicbrainz_release_id</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">3</property>
-              <property name="sticky">w</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="musicbrainz_release_title_lb" named="True">
-            <property name="text" translatable="yes">Title</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">4</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="musicbrainz_release_title" named="True">
-            <property name="textvariable">string:tv_musicbrainz_release_title</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">4</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="musicbrainz_release_artist_lb" named="True">
-            <property name="justify">right</property>
-            <property name="text" translatable="yes">Artist</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="row">5</property>
-              <property name="sticky">e</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Label" id="musicbrainz_release_artist" named="True">
-            <property name="textvariable">string:tv_musicbrainz_release_artist</property>
-            <layout manager="grid">
-              <property name="column">1</property>
-              <property name="row">5</property>
-            </layout>
-          </object>
-        </child>
-      </object>
-    </child>
-    <child>
-      <object class="ttk.Frame" id="frame1">
+      <object class="ttk.Frame" id="canvas_frame" named="True">
         <property name="height">200</property>
         <property name="width">200</property>
         <layout manager="grid">
           <property name="column">0</property>
           <property name="columnspan">5</property>
-          <property name="row">1</property>
+          <property name="row">2</property>
           <property name="sticky">nsew</property>
         </layout>
-        <containerlayout manager="grid">
+        <containerlayout manager="pack">
           <property name="propagate">false</property>
-          <property type="col" id="0" name="weight">1</property>
-          <property type="row" id="0" name="weight">1</property>
         </containerlayout>
         <child>
           <object class="tk.Canvas" id="image_canvas" named="True">

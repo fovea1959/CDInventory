@@ -89,7 +89,7 @@ class MB:
         return release
 
 
-class BufferlesCvCapture:
+class CvCapture:
     def __init__(self, name: str = "/dev/video0", max_resolution: bool = False):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.name = name
@@ -118,7 +118,7 @@ class BufferlesCvCapture:
         max_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         max_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        logging.info(f"Resolution: {max_w}x{max_h}")
+        self.logger.info(f"Resolution: {max_w}x{max_h}")
 
         self.q = queue.Queue()
         self.thread = threading.Thread(target=self._reader, name="Camera")   # not a Daemon!
@@ -127,6 +127,7 @@ class BufferlesCvCapture:
     # read frames as soon as they are available, keeping only most recent one
     def _reader(self):
         self.running = True
+        self.logger.info("starting")
         try:
             while self.should_run:
                 ret, frame = self.cap.read()
@@ -139,7 +140,9 @@ class BufferlesCvCapture:
                         pass
                 self.q.put(frame)
         finally:
+            self.logger.info("cleaning up")
             self.cap.release()
+            self.logger.info("finished")
             self.running = False
 
     def read(self):

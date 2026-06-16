@@ -10,7 +10,7 @@ import pyzbar.pyzbar
 
 import CDInventoryDao
 
-from utils import MB, BufferlesCvCapture, save_cd, save_location, Beeper
+from utils import MB, CvCapture, save_cd, save_location, Beeper
 
 
 class G:
@@ -48,7 +48,7 @@ def main(argv):
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    cam = BufferlesCvCapture(args.camera)
+    cam = CvCapture(args.camera)
 
     g = G()
     g.mb = MB()

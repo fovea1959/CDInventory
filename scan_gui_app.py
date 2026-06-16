@@ -35,7 +35,7 @@ class G:
     def __init__(self):
         self.gui: CDInventoryApp | None = None
         self.master: Master | None = None
-        self.barcode_reader: CVBarcodeReader | None = None
+        self.barcode_reader: CvBarcodeReader | None = None
         self.mb = utils.MB()
         self.die = False
 
@@ -47,10 +47,11 @@ class Browser:
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.thread = threading.Thread(target=self.run, daemon=True, name="playwright_watcher")
+        self.thread = threading.Thread(target=self.run, daemon=True, name="browser")
         self.thread.start()
 
     def run(self):
+        self.logger.info('starting')
         while not self.g.die:
             with sync_playwright() as p:
                 browser = p.chromium.launch_persistent_context(user_data_dir="chromium_user_data", headless=False)
@@ -73,11 +74,12 @@ class Browser:
 
                 page_or_context.on("framenavigated", on_navigation)
 
-                self.logger.info(f"Spawning browser for: {self.start_url}")
+                self.logger.info("Spawning browser for: %s", self.start_url)
                 try:
                     page.goto(self.start_url)
                     while (not self.g.die) and (not page.is_closed()):
                         page.wait_for_timeout(1000)
+                    self.logger.info("died or browser closed")
 
                 except TargetClosedError:
                     self.logger.info("browser was closed; re-opening")
@@ -85,6 +87,12 @@ class Browser:
                 except Exception as e:
                     self.logger.error(f"An error occurred: {type(e)} {e}")
                     break
+
+                finally:
+                    self.logger.info('closing browser')
+                    context.close()
+
+        self.logger.info('finished')
 
     def done(self):
         self.thread.join()
@@ -108,6 +116,7 @@ class Master:
         self.thread.join()
 
     def run(self):
+        self.logger.info('starting')
         with self.dao:
             while not self.g.die:
                 try:
@@ -122,6 +131,7 @@ class Master:
                 except queue.Empty:
                     # The queue was empty; do nothing
                     pass
+        self.logger.info('finished')
 
     def _do(self, f):
         self.logger.info('putting %s on the master queue', f)
@@ -237,16 +247,17 @@ class Master:
         self.selected_location = utils.save_location(self.dao, location_id, location_description)
 
 
-class CVBarcodeReader:
+class CvBarcodeReader:
     def __init__(self, g: G | None = None, name: str = '/dev/video0'):
         self.g = g
-        self.cam = utils.BufferlesCvCapture(name)
+        self.cam = utils.CvCapture(name)
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self.thread = threading.Thread(target=self.run, daemon=True, name="Barcode")
         self.thread.start()
 
     def run(self):
+        self.logger.info("starting")
         shape = None
         last_data = None
         last_scan_time = 0
@@ -287,8 +298,8 @@ class CVBarcodeReader:
             self.logger.info("cleaning up")
             # Cleanup
             self.cam.release()
-            cv2.destroyAllWindows()
-            self.logger.info("all done")
+            # cv2.destroyAllWindows()
+            self.logger.info("finished")
 
     def done(self):
         self.thread.join()
@@ -320,10 +331,34 @@ class CDInventoryApp(CDInventoryGenericApp):
 
         self.logger.info("__init__ successful")
 
+    def center_window(self):
+        # Force an update of idle tasks to get accurate dimensions before mapping
+        self.mainwindow.update_idletasks()
+
+        # Get screen dimensions
+        screen_width = self.mainwindow.winfo_screenwidth()
+        screen_height = self.mainwindow.winfo_screenheight()
+
+        # Get window dimensions
+        win_width = self.mainwindow.winfo_width()
+        win_height = self.mainwindow.winfo_height()
+
+        # Calculate X and Y coordinates
+        x = (screen_width // 2) - (win_width // 2)
+        y = (screen_height // 2) - (win_height // 2)
+
+        # Set the geometry
+        self.mainwindow.geometry(f'{win_width}x{win_height}+{x}+{y}')
+
     def run(self):
         self.running = True
+        self.logger.info("centering window")
+        self.center_window()
+        self.logger.info("starting")
         super().run()
         self.running = False
+        self.g.die = True
+        self.logger.info("finished")
 
     def cb_tie_release_to_cd(self, event=None):
         self.logger.info('bloop!')
@@ -384,12 +419,26 @@ class CDInventoryApp(CDInventoryGenericApp):
 
     def _set_image(self, image):
         # self.logger.info("calling _set_image")
-        # Convert the Pillow image to a Tkinter-compatible PhotoImage
-        self.tk_image = PIL.ImageTk.PhotoImage(image)
 
-        # Draw the image onto the Canvas
-        # (0, 0) specifies coordinates; anchor=tk.NW aligns it to the top-left corner
-        self.image_canvas.create_image(0, 0, image=self.tk_image, anchor=tk.NW)
+        img_width, img_height = image.size
+        canvas_width = self.image_canvas.winfo_width()
+        canvas_height = self.image_canvas.winfo_height()
+
+        # 3. Calculate the maximum scaling factor to maintain aspect ratio
+        ratio = min(canvas_width / img_width, canvas_height / img_height)
+        new_width = int(img_width * ratio)
+        new_height = int(img_height * ratio)
+
+        # 4. Resize the PIL image using the calculated dimensions
+        resized_img = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        self.tk_image = ImageTk.PhotoImage(resized_img)
+
+        center_x = canvas_width // 2
+        center_y = canvas_height // 2
+
+        self.image_id = self.image_canvas.create_image(
+            center_x, center_y, image=self.tk_image, anchor=tk.CENTER
+        )
 
         # self.logger.info("_set_image done")
 
@@ -405,30 +454,24 @@ def main(argv):
 
     g.master = Master(g=g)
     g.browser = Browser(g=g, start_url='https://www.musicbrainz.org/search')
-    g.barcodeReader = CVBarcodeReader(g=g)
+    g.barcodeReader = CvBarcodeReader(g=g)
 
     logging.info("browser started")
 
     app = CDInventoryApp(g=g)
     app.run()
-    g.die = True
-    logging.info("tkinter run() is done")
 
+    logging.info('waiting for barcodeReader thread')
     g.barcodeReader.done()
+    logging.info('waiting for browser thread')
     g.browser.done()
+    logging.info('waiting for master thread')
     g.master.done()
-
-    '''
-    QObject::killTimer: Timers cannot be stopped from another thread
-    QObject::~QObject: Timers cannot be stopped from another thread
-    
-    caused by doing opencv2 imshow or waitkey not on main thread.
-    
-    https://forum.opencv.org/t/qobject-timers-cannot-be-stopped-from-another-thread-when-using-waitkey-function/17903/2
-    '''
+    logging.info('all done!')
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stderr,
-                        format="%(levelname)s l=%(name)s t=%(threadName)s %(message)s")
+                        format="%(levelname)-8s l=%(name)-15s %(message)s")
+    #                    format="%(levelname)-8s l=%(name)-15s t=%(threadName)-10s %(message)s")
     main(sys.argv[1:])
