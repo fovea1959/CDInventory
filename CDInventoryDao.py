@@ -51,12 +51,6 @@ class DAO:
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
-    def get_barcode_alias(self, barcode_type: str = '', barcode: str = '') -> Optional[BarcodeAlias]:
-        query = (sqlalchemy.select(BarcodeAlias)
-                 .where(BarcodeAlias.scan_encoding == barcode_type, BarcodeAlias.scan_text == barcode))
-        rv = self.session.execute(query).scalar_one_or_none()
-        return rv
-
 
 # noinspection PyUnusedLocal
 def main(argv):

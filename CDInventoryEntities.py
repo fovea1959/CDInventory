@@ -34,7 +34,7 @@ class Location(Base):
     location_description: Mapped[str] = mapped_column(Text)
     location_contents: Mapped[List['CD']] = relationship("CD", back_populates="cd_location")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._repr(
             id=self.location_id,
             description=self.location_description
@@ -55,34 +55,11 @@ class CD(Base):
     cd_location_id: Mapped[Optional[str]] = mapped_column(ForeignKey("locations.location_id"), nullable=True)
     cd_location: Mapped[Optional[Location]] = relationship("Location", back_populates="location_contents")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._repr(
             id=self.cd_id,
             barcode=self.cd_barcode,
             title=self.cd_title,
             artist=self.cd_artists,
             location_id=self.cd_location_id
-        )
-
-
-class BarcodeAlias(Base):
-    __tablename__ = 'barcode_aliases'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    scan_encoding: Mapped[str] = mapped_column(Text)
-    scan_text: Mapped[str] = mapped_column(Text)
-    ean13: Mapped[Optional[str]] = mapped_column(Text)
-    musicbrainz_release_id: Mapped[Optional[str]] = mapped_column(Text)
-
-    __table_args__ = (
-        UniqueConstraint("scan_encoding", "scan_text", name="uq_scan"),
-    )
-
-    def __repr__(self):
-        return self._repr(
-            id=self.id,
-            encoding=self.scan_encoding,
-            text=self.scan_text,
-            ean=self.ean13,
-            musicbrainz_release_id=self.musicbrainz_release_id
         )
