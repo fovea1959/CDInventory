@@ -7,9 +7,15 @@ import queue
 import re
 import sys
 import threading
+import time
+
+import tkinter as tk
 
 import cv2
+import PIL
 import pyzbar.pyzbar
+
+from PIL import Image, ImageTk
 
 from playwright.sync_api import sync_playwright
 from playwright._impl._errors import TargetClosedError
@@ -243,6 +249,7 @@ class CVBarcodeReader:
     def run(self):
         shape = None
         last_data = None
+        last_scan_time = 0
         try:
             while not self.g.die:
                 # Read frame
@@ -254,12 +261,17 @@ class CVBarcodeReader:
 
                 # Process: Convert to grayscale and blur
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                cv2.imshow('Gray', gray)
+                #cv2.imshow('Gray', gray)
+
+                pil_image = PIL.Image.fromarray(gray)
+                self.g.gui.set_image(pil_image)
 
                 zbar = pyzbar.pyzbar.decode(gray)
                 if len(zbar) > 0:
                     d = zbar[0].data
-                    if d != last_data:
+                    now = time.time()
+                    if d != last_data or (now - last_scan_time > 2):
+                        last_scan_time = now
                         last_data = d
                         barcode = d.decode()
                         barcode_type = zbar[0].type
@@ -268,8 +280,8 @@ class CVBarcodeReader:
                         self.g.master.receive_scan(barcode_type, barcode)
 
                 # Exit with 'q'
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                #if cv2.waitKey(1) & 0xFF == ord('q'):
+                #    break
 
         finally:
             self.logger.info("cleaning up")
@@ -301,14 +313,28 @@ class CDInventoryApp(CDInventoryGenericApp):
         g.gui = self
         self.logger = logging.getLogger(self.__class__.__name__)
 
+        self.image_canvas = self.builder.get_object('image_canvas', master)
+        self.tk_image = None
+
+        self.running = False
+
         self.logger.info("__init__ successful")
+
+    def run(self):
+        self.running = True
+        super().run()
+        self.running = False
 
     def cb_tie_release_to_cd(self, event=None):
         self.logger.info('bloop!')
         self.g.master.update_current_cd_from_musicbrainz()
 
+    def _do(self, f):
+        if self.running:
+            self.mainwindow.after(0, f)
+
     def set_text_field(self, name, value):
-        self.mainwindow.after(0, lambda: self._set_text_field(name, value))
+        self._do(lambda: self._set_text_field(name, value))
         
     def _set_text_field(self, name, value):
         string_var = self.builder.get_variable(name)
@@ -351,6 +377,22 @@ class CDInventoryApp(CDInventoryGenericApp):
             self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_TITLE, release.get('title'))
             self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ARTIST, release.get('artists'))
 
+    def set_image(self, image):
+        # self.logger.info("calling set_image")
+        self._do(lambda: self._set_image(image))
+        # self.logger.info("set_image done")
+
+    def _set_image(self, image):
+        # self.logger.info("calling _set_image")
+        # Convert the Pillow image to a Tkinter-compatible PhotoImage
+        self.tk_image = PIL.ImageTk.PhotoImage(image)
+
+        # Draw the image onto the Canvas
+        # (0, 0) specifies coordinates; anchor=tk.NW aligns it to the top-left corner
+        self.image_canvas.create_image(0, 0, image=self.tk_image, anchor=tk.NW)
+
+        # self.logger.info("_set_image done")
+
     def happy(self):
         pass
 
@@ -388,5 +430,5 @@ def main(argv):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stderr,
-                        format="%(asctime)s [%(levelname)s] (%(threadName)s) %(message)s")
+                        format="%(levelname)s l=%(name)s t=%(threadName)s %(message)s")
     main(sys.argv[1:])

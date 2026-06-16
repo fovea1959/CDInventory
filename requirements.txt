@@ -11,3 +11,4 @@ qrcode~=8.2
 python-barcode
 pygubu~=0.40
 pygubu-designer~=0.43.3
+pillow~=12.2.0
