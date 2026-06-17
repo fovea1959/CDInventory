@@ -24,10 +24,7 @@
     <resources />
   </project>
   <object class="tk.Tk" id="tk1">
-    <property name="background">#f3f100</property>
     <property name="height">600</property>
-    <property name="padx">5</property>
-    <property name="pady">5</property>
     <property name="title" translatable="yes">CD Inventory</property>
     <property name="width">800</property>
     <containerlayout manager="grid">
@@ -36,9 +33,6 @@
     </containerlayout>
     <child>
       <object class="tk.Frame" id="top_row" named="True">
-        <property name="background">#0000ff</property>
-        <property name="padx">5</property>
-        <property name="pady">5</property>
         <property name="width">200</property>
         <layout manager="grid">
           <property name="column">0</property>
@@ -409,10 +403,7 @@
     </child>
     <child>
       <object class="tk.Frame" id="bottom_row" named="True">
-        <property name="background">#ff8080</property>
         <property name="height">200</property>
-        <property name="padx">5</property>
-        <property name="pady">5</property>
         <property name="width">200</property>
         <layout manager="grid">
           <property name="column">0</property>
