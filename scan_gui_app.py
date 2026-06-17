@@ -461,12 +461,15 @@ def main(argv):
     app = CDInventoryApp(g=g)
     app.run()
 
-    logging.info('waiting for barcodeReader thread')
+    logging.info('waiting for barcodeReader thread...')
     g.barcodeReader.done()
-    logging.info('waiting for browser thread')
+    logging.info('...barcodeReader thread done')
+    logging.info('waiting for browser thread...')
     g.browser.done()
+    logging.info('...browser thread done')
     logging.info('waiting for master thread')
     g.master.done()
+    logging.info('...master thread done')
     logging.info('all done!')
 
 
