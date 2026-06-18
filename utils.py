@@ -112,13 +112,13 @@ class CvCapture:
         # Verification (Optional: Check if the codec updated successfully)
         fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC))
         codec = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
-        logging.info(f"Current format: {codec}")
+        self.logger.debug(f"Current format: {codec}")
 
         # Read the clipped maximum limits back
         max_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         max_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        self.logger.info(f"Resolution: {max_w}x{max_h}")
+        self.logger.debug(f"Resolution: {max_w}x{max_h}")
 
         self.q = queue.Queue()
         self.thread = threading.Thread(target=self._reader, name="Camera")   # not a Daemon!
@@ -154,7 +154,7 @@ class CvCapture:
         self.should_run = False
         self.logger.info("waiting for my thread to die")
         self.thread.join()
-        self.logger.info("thread is dead")
+        self.logger.info("thread is joined")
 
 
 def save_cd(dao: DAO, barcode, mb_cd, current_location):
@@ -219,3 +219,12 @@ def check_ean_for_badness(ean: str) -> str | None:
         return f"bad check digit {existing_check_digit}, should be {calculated_check_digit}"
     return None
 
+
+class QueueHandler(logging.Handler):
+    """Sends logging records to a thread-safe queue."""
+    def __init__(self, log_queue):
+        super().__init__()
+        self.log_queue = log_queue
+
+    def emit(self, record):
+        self.log_queue.put(record)

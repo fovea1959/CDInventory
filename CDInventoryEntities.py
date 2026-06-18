@@ -26,6 +26,10 @@ class Base(DeclarativeBase):
             return f"<{self.__class__.__name__}({','.join(field_strings)})>"
         return f"<{self.__class__.__name__} {id(self)}>"
 
+    def to_dict(self):
+        """Converts the mapped columns of the model instance into a dictionary."""
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
 
 class Location(Base):
     __tablename__ = 'locations'
