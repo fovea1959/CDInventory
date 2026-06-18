@@ -91,6 +91,9 @@ barcodes.json
 barcodes.pickle
 *.db
 chromium_user_data/
-
 scan_gui_generic_app.py
 scan_gui_generic_appui.py
+__pycache__
+app.log
+.venv/
+layout_issue_simple_*.ui
