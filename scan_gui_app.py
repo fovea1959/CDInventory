@@ -271,6 +271,9 @@ class CvBarcodeReader:
                 # Read frame
                 frame = self.cam.read()
 
+                if frame is None:  # timed out or died
+                    continue
+
                 if shape is None:
                     shape = frame.shape
                     self.logger.info("shape = %s", shape)
@@ -415,7 +418,7 @@ class CDInventoryApp(CDInventoryGenericApp):
         else:
             self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ID, release.get('id'))
             self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_TITLE, release.get('title'))
-            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ARTIST, release.get('artists'))
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ARTIST, ' / '.join(release.get('artists', '')))
 
     def set_image(self, image):
         # self.logger.info("calling set_image")
@@ -494,7 +497,7 @@ def main(argv):
     logging.info('waiting for browser thread...')
     g.browser.done()
     logging.info('...browser thread done')
-    logging.info('waiting for master thread')
+    logging.info('waiting for master thread...')
     g.master.done()
     logging.info('...master thread done')
     logging.info('all done!')
