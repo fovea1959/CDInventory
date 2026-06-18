@@ -41,7 +41,7 @@ class G:
 
 
 class Browser:
-    def __init__(self, g: G = None, start_url: str = None):
+    def __init__(self, g: G | None = None, start_url: str | None = None):
         self.g = g
         self.start_url = start_url
 
@@ -99,7 +99,7 @@ class Browser:
 
 
 class Master:
-    def __init__(self, g: G = None):
+    def __init__(self, g: G | None = None):
         self.g = g
         self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue.Queue()
@@ -166,13 +166,18 @@ class Master:
             self.g.gui.happy() if ok else self.g.gui.sad()
 
         elif barcode_type == 'EAN13':
-            self._handle_cd_barcode(barcode)
+            badness = utils.check_ean_for_badness(barcode)
+            if badness is None:
+                self._handle_cd_barcode(barcode)
+            else:
+                self.g.gui.toast(f"Bad scan '{barcode}': {badness}")
 
         elif barcode_type == 'CODE39':
             self._handle_cd_barcode(barcode)
 
         else:
             # unknown barcode type
+            self.g.gui.toast(f"Bad {barcode_type} scan '{barcode}'")
             self.g.gui.sad()
 
     def update_current_cd_from_musicbrainz(self):
@@ -234,7 +239,7 @@ class Master:
         self.check_thread()
 
         m = re.match(
-            r'^https://musicbrainz.org/release/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$',
+            r'^https://musicbrainz.org/release/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\??.*$',
             url, flags=re.ASCII | re.IGNORECASE)
         if m:
             release_id = m.group(1)
@@ -441,6 +446,28 @@ class CDInventoryApp(CDInventoryGenericApp):
         )
 
         # self.logger.info("_set_image done")
+
+    def toast(self, message: str = '', duration=2500):
+        self._do(lambda: self._toast(message, duration))
+
+    def _toast(self, message, duration):
+            # Create a borderless popup window
+            toast = tk.Toplevel(self.mainwindow)
+            toast.overrideredirect(True)
+
+            # Style the window
+            toast.config(bg="#333333")
+            label = tk.Label(toast, text=message, fg="white", bg="#333333", padx=15, pady=10, font=("Arial", 10))
+            label.pack()
+
+            # Position the toast window relative to the main window
+            self.mainwindow.update_idletasks()
+            x = self.mainwindow.winfo_x() + (self.mainwindow.winfo_width() // 2) - (toast.winfo_reqwidth() // 2)
+            y = self.mainwindow.winfo_y() + self.mainwindow.winfo_height() - 70
+            toast.geometry(f"+{x}+{y}")
+
+            # Automatically close the toast window after the delay
+            toast.after(duration, toast.destroy)
 
     def happy(self):
         pass

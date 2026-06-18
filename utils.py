@@ -127,7 +127,7 @@ class CvCapture:
     # read frames as soon as they are available, keeping only most recent one
     def _reader(self):
         self.running = True
-        self.logger.info("starting")
+        self.logger.info("thread starting")
         try:
             while self.should_run:
                 ret, frame = self.cap.read()
@@ -140,9 +140,9 @@ class CvCapture:
                         pass
                 self.q.put(frame)
         finally:
-            self.logger.info("cleaning up")
+            self.logger.info("thread is cleaning up")
             self.cap.release()
-            self.logger.info("finished")
+            self.logger.info("thread is finished")
             self.running = False
 
     def read(self):
@@ -150,8 +150,11 @@ class CvCapture:
         return cv2.flip(im, -1)
 
     def release(self):
+        self.logger.info("telling my thread to die")
         self.should_run = False
+        self.logger.info("waiting for my thread to die")
         self.thread.join()
+        self.logger.info("thread is dead")
 
 
 def save_cd(dao: DAO, barcode, mb_cd, current_location):
@@ -186,3 +189,33 @@ def save_location(dao: DAO, location_id, location_description):
     current_location.location_description = location_description.strip()
     dao.session.commit()
     return current_location
+
+
+def check_ean_for_badness(ean: str) -> str | None:
+    # 1. Clean the string by removing dashes and spaces
+    clean_code = "".join(ean.split()).replace("-", "")
+
+    # 2. Check if length is valid for EAN-13 or EAN-8 and contains only digits
+    if len(clean_code) not in (8, 13):
+        return f"invalid length {len(clean_code)}, should be 8 or 13"
+
+    if not clean_code.isdigit():
+        return f"non-digit present"
+
+    # 3. Separate payload from the existing check digit
+    payload = clean_code[:-1]
+    existing_check_digit = int(clean_code[-1])
+
+    # 4. Calculate checksum based on GS1 rules (reverse weights 3 and 1)
+    total_sum = 0
+    for i, digit in enumerate(reversed(payload)):
+        weight = 3 if i % 2 == 0 else 1
+        total_sum += int(digit) * weight
+
+    calculated_check_digit = (10 - (total_sum % 10)) % 10
+
+    # 5. Compare calculated check digit with the actual one
+    if calculated_check_digit != existing_check_digit:
+        return f"bad check digit {existing_check_digit}, should be {calculated_check_digit}"
+    return None
+
