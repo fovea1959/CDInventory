@@ -179,7 +179,20 @@ class Master:
                 self.logger.warning("%s scan '%s' problem: '%s'", barcode_type, barcode, badness)
 
         elif barcode_type == 'CODE39':
-            self._handle_cd_barcode(barcode)
+            m = re.match(r'^D\d{6}$', barcode)
+            if m:
+                self._handle_cd_barcode(barcode)
+            else:
+                # self.g.gui.toast(f"Bad scan '{barcode}': {badness}")
+                self.logger.warning("Don't recognize %s scan '%s'", barcode_type, barcode)
+
+        elif barcode_type == 'CODE128':
+            m = re.match(r'^DW_CD:\d+$', barcode)
+            if m:
+                self._handle_cd_barcode(barcode)
+            else:
+                # self.g.gui.toast(f"Bad scan '{barcode}': {badness}")
+                self.logger.warning("Don't recognize %s scan '%s'", barcode_type, barcode)
 
         else:
             # unknown barcode type
