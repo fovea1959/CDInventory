@@ -151,7 +151,7 @@ class Master:
         self._do(lambda: self._receive_scan(barcode_type, barcode))
 
     def _receive_scan(self, barcode_type, barcode):
-        self.logger.important("master received %s barcode: %s", barcode_type, barcode)
+        self.logger.important("master received %s scan: '%s'", barcode_type, barcode)
         self.check_thread()
         if barcode_type == 'QRCODE':
             ok = True
@@ -179,7 +179,20 @@ class Master:
                 self.logger.warning("%s scan '%s' problem: '%s'", barcode_type, barcode, badness)
 
         elif barcode_type == 'CODE39':
-            self._handle_cd_barcode(barcode)
+            m = re.match(r'^D\d{6}$', barcode)
+            if m:
+                self._handle_cd_barcode(barcode)
+            else:
+                # self.g.gui.toast(f"Bad scan '{barcode}': {badness}")
+                self.logger.warning("Don't recognize %s scan '%s'", barcode_type, barcode)
+
+        elif barcode_type == 'CODE128':
+            m = re.match(r'^DW_CD:\d+$', barcode)
+            if m:
+                self._handle_cd_barcode(barcode)
+            else:
+                # self.g.gui.toast(f"Bad scan '{barcode}': {badness}")
+                self.logger.warning("Don't recognize %s scan '%s'", barcode_type, barcode)
 
         else:
             # unknown barcode type
@@ -281,6 +294,9 @@ class CvBarcodeReader:
                 # Read frame
                 frame = self.cam.read()
 
+                if frame is None:  # timed out or died
+                    continue
+
                 if shape is None:
                     shape = frame.shape
                     self.logger.info("shape = %s", shape)
@@ -290,7 +306,8 @@ class CvBarcodeReader:
                 #cv2.imshow('Gray', gray)
 
                 pil_image = PIL.Image.fromarray(gray)
-                self.g.gui.set_image(pil_image)
+                if self.g.gui is not None:  # might not be there yet
+                    self.g.gui.set_image(pil_image)
 
                 zbar = pyzbar.pyzbar.decode(gray)
                 if len(zbar) > 0:
@@ -301,13 +318,9 @@ class CvBarcodeReader:
                         last_data = d
                         barcode = d.decode()
                         barcode_type = zbar[0].type
-                        self.logger.info("Got %s: %s", barcode_type, barcode)
+                        self.logger.info("Read %s scan '%s'", barcode_type, barcode)
 
                         self.g.master.receive_scan(barcode_type, barcode)
-
-                # Exit with 'q'
-                #if cv2.waitKey(1) & 0xFF == ord('q'):
-                #    break
 
         finally:
             self.logger.info("cleaning up")
@@ -382,7 +395,6 @@ class CDInventoryApp(CDInventoryGenericApp):
         self.logger.info("starting")
         super().run()
         self.running = False
-        self.g.die = True
         self.logger.info("finished")
 
     def cb_tie_release_to_cd(self, event=None):
@@ -434,7 +446,7 @@ class CDInventoryApp(CDInventoryGenericApp):
         else:
             self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ID, release.get('id'))
             self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_TITLE, release.get('title'))
-            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ARTIST, release.get('artists'))
+            self.set_text_field(self.TV_MUSICBRAINZ_RELEASE_ARTIST, ' / '.join(release.get('artists', '')))
 
     def set_image(self, image):
         # self.logger.info("calling set_image")
@@ -563,36 +575,56 @@ def main(argv):
     queue_handler.setLevel(IMPORTANT_LEVEL_NUM)
     logger.addHandler(queue_handler)
 
+    '''
     logger.debug("debug")
     logger.verbose("verbose")
     logger.info("info")
     logger.important("important")
     logger.warning("warning")
     logger.error("error")
+    '''
 
     g = G()
 
-    g.master = Master(g=g)
-    g.browser = Browser(g=g, start_url='https://www.musicbrainz.org/search')
-    g.barcodeReader = CvBarcodeReader(g=g)
+    try:
+        g.master = Master(g=g)
+        g.browser = Browser(g=g, start_url='https://www.musicbrainz.org/search')
+        g.barcodeReader = CvBarcodeReader(g=g)
 
-    app = CDInventoryApp(g=g, log_queue=log_queue)
-    app.run()
+        app = CDInventoryApp(g=g, log_queue=log_queue)
+        app.run()
+    except KeyboardInterrupt:
+        logging.important("received KeyboardInterrupt")
+    except Exception as exc:
+        logging.error("received %s", exc, exc_info=exc)
+    finally:
+        g.die = True
 
     logging.info('waiting for barcodeReader thread...')
-    g.barcodeReader.done()
+    try:
+        g.barcodeReader.done()
+    finally:
+        pass
     logging.info('...barcodeReader thread done')
+
     logging.info('waiting for browser thread...')
-    g.browser.done()
+    try:
+        g.browser.done()
+    finally:
+        pass
     logging.info('...browser thread done')
-    logging.info('waiting for master thread')
-    g.master.done()
+
+    logging.info('waiting for master thread...')
+    try:
+        g.master.done()
+    finally:
+        pass
     logging.info('...master thread done')
     logging.info('all done!')
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stderr,
-                        format="%(levelname)-8s l=%(name)-15s %(message)s")
+                        format="%(levelname)-9s l=%(name)-15s %(message)s")
     #                    format="%(levelname)-8s l=%(name)-15s t=%(threadName)-10s %(message)s")
     main(sys.argv[1:])

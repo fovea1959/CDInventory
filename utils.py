@@ -121,7 +121,7 @@ class CvCapture:
         self.logger.debug(f"Resolution: {max_w}x{max_h}")
 
         self.q = queue.Queue()
-        self.thread = threading.Thread(target=self._reader, name="Camera")   # not a Daemon!
+        self.thread = threading.Thread(target=self._reader, name="Camera", daemon=True)
         self.thread.start()
 
     # read frames as soon as they are available, keeping only most recent one
@@ -141,11 +141,13 @@ class CvCapture:
                 self.q.put(frame)
         finally:
             self.logger.info("thread is cleaning up")
+            self.q.put(None)  # wake up consumers
             self.cap.release()
             self.logger.info("thread is finished")
             self.running = False
 
     def read(self):
+        # make this have a timeout
         im = self.q.get()
         return cv2.flip(im, -1)
 
