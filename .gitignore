@@ -97,3 +97,5 @@ __pycache__
 app.log
 .venv/
 layout_issue_simple_*.ui
+*.pdf
+*.sql
