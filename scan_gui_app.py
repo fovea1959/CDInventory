@@ -39,8 +39,8 @@ class WrongThreadException(Exception):
 class G:
     def __init__(self):
         self.gui: CDInventoryApp | None = None
-        self.master: Master | None = None
-        self.barcode_reader: CvBarcodeReader | None = None
+        self.master: Boss | None = None
+        self.barcode_reader: CvBarcode | None = None
         self.mb = utils.MB()
         self.die = False
 
@@ -52,7 +52,7 @@ class Browser:
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.thread = threading.Thread(target=self.run, daemon=True, name="browser")
+        self.thread = threading.Thread(target=self.run, daemon=True, name=self.__class__.__name__)
         self.thread.start()
 
     def run(self):
@@ -103,7 +103,7 @@ class Browser:
         self.thread.join()
 
 
-class Master:
+class Boss:
     def __init__(self, g: G | None = None):
         self.g = g
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -114,7 +114,7 @@ class Master:
         self.current_cd: CD | None = None
         self.mb = utils.MB()
 
-        self.thread = threading.Thread(target=self.run, daemon=True, name="master")
+        self.thread = threading.Thread(target=self.run, daemon=True, name=self.__class__.__name__)
         self.thread.start()
 
     def done(self):
@@ -128,9 +128,9 @@ class Master:
                     # Check the queue without blocking the main loop
                     f = self.queue.get(timeout=1)
                     if f is None:
-                        self.logger.warning('got None from master queue')
+                        self.logger.warning('got None from Boss queue')
                     else:
-                        self.logger.info('got %s from master queue', f)
+                        self.logger.info('got %s from Boss queue', f)
                         f()
 
                 except queue.Empty:
@@ -139,7 +139,7 @@ class Master:
         self.logger.info('finished')
 
     def _do(self, f):
-        self.logger.info('putting %s on the master queue', f)
+        self.logger.info('putting %s on the Boss queue', f)
         self.queue.put(f)
 
     def check_thread(self):
@@ -151,7 +151,7 @@ class Master:
         self._do(lambda: self._receive_scan(barcode_type, barcode))
 
     def _receive_scan(self, barcode_type, barcode):
-        self.logger.important("master received %s scan: '%s'", barcode_type, barcode)
+        self.logger.important("Boss received %s scan: '%s'", barcode_type, barcode)
         self.check_thread()
         if barcode_type == 'QRCODE':
             ok = True
@@ -219,7 +219,13 @@ class Master:
         self.g.gui.set_cd(self.current_cd)
 
     def _handle_location_barcode(self, location_id, location_description):
-        self.selected_location = utils.save_location(self.dao, location_id, location_description)
+        self._set_location(utils.save_location(self.dao, location_id, location_description))
+
+    def clear_location(self):
+        self._do(lambda: self._set_location(None))
+
+    def _set_location(self, location: Location | None):
+        self.selected_location = location
         self.g.gui.set_location(self.selected_location)
 
     def _handle_cd_barcode(self, barcode):
@@ -258,7 +264,7 @@ class Master:
         self._do(lambda: self._receive_url(url))
 
     def _receive_url(self, url):
-        self.logger.info("master received URL: %s", url)
+        self.logger.info("received URL: %s", url)
         self.check_thread()
 
         m = re.match(
@@ -275,13 +281,13 @@ class Master:
         self.selected_location = utils.save_location(self.dao, location_id, location_description)
 
 
-class CvBarcodeReader:
+class CvBarcode:
     def __init__(self, g: G | None = None, name: str = '/dev/video0'):
         self.g = g
         self.cam = utils.CvCapture(name)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.thread = threading.Thread(target=self.run, daemon=True, name="Barcode")
+        self.thread = threading.Thread(target=self.run, daemon=True, name=self.__class__.__name__)
         self.thread.start()
 
     def run(self):
@@ -396,6 +402,9 @@ class CDInventoryApp(CDInventoryGenericApp):
         super().run()
         self.running = False
         self.logger.info("finished")
+
+    def cb_clear_location(self):
+        self.g.master.clear_location()
 
     def cb_tie_release_to_cd(self, event=None):
         self.g.master.update_current_cd_from_musicbrainz()
@@ -587,44 +596,44 @@ def main(argv):
     g = G()
 
     try:
-        g.master = Master(g=g)
+        g.master = Boss(g=g)
         g.browser = Browser(g=g, start_url='https://www.musicbrainz.org/search')
-        g.barcodeReader = CvBarcodeReader(g=g)
+        g.barcodeReader = CvBarcode(g=g)
 
         app = CDInventoryApp(g=g, log_queue=log_queue)
         app.run()
     except KeyboardInterrupt:
-        logging.important("received KeyboardInterrupt")
+        logger.important("received KeyboardInterrupt")
     except Exception as exc:
-        logging.error("received %s", exc, exc_info=exc)
+        logger.error("received %s", exc, exc_info=exc)
     finally:
+        logger.important("telling everyone to die")
         g.die = True
 
-    logging.info('waiting for barcodeReader thread...')
+    logger.info('waiting for barcodeReader thread...')
     try:
         g.barcodeReader.done()
     finally:
         pass
-    logging.info('...barcodeReader thread done')
+    logger.info('...barcodeReader thread done')
 
-    logging.info('waiting for browser thread...')
+    logger.info('waiting for browser thread...')
     try:
         g.browser.done()
     finally:
         pass
-    logging.info('...browser thread done')
+    logger.info('...browser thread done')
 
-    logging.info('waiting for master thread...')
+    logger.info('waiting for master thread...')
     try:
         g.master.done()
     finally:
         pass
-    logging.info('...master thread done')
-    logging.info('all done!')
+    logger.info('...master thread done')
+    logger.info('all done!')
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stderr,
-                        format="%(levelname)-9s l=%(name)-15s %(message)s")
-    #                    format="%(levelname)-8s l=%(name)-15s t=%(threadName)-10s %(message)s")
+                        format="%(levelname)-9s l=%(name)-15s t=%(threadName)-10s %(message)s")
     main(sys.argv[1:])

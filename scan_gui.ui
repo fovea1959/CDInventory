@@ -113,6 +113,7 @@
             </child>
             <child>
               <object class="ttk.Button" id="button1">
+                <property name="command" type="command" cbtype="simple">cb_clear_location</property>
                 <property name="text" translatable="yes">Clear Location</property>
                 <layout manager="grid">
                   <property name="column">0</property>

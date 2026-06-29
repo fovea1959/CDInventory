@@ -147,16 +147,18 @@ class CvCapture:
             self.running = False
 
     def read(self):
-        # make this have a timeout
-        im = self.q.get()
-        return cv2.flip(im, -1)
+        try:
+            im = self.q.get(timeout=1.0)
+            return cv2.flip(im, -1)
+        except queue.Empty:
+            return None
 
     def release(self):
-        self.logger.info("telling my thread to die")
+        self.logger.info("telling my thread to die...")
         self.should_run = False
-        self.logger.info("waiting for my thread to die")
+        self.logger.info("...waiting for my thread to die...")
         self.thread.join()
-        self.logger.info("thread is joined")
+        self.logger.info("...thread is dead")
 
 
 def save_cd(dao: DAO, barcode, mb_cd, current_location):

@@ -82,17 +82,20 @@ def main(argv):
 
             row = table.row(min_height=35)
 
-            qr = qrcode.QRCode(
-                version=None,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=4,
-            )
-            id = str(uuid4.next())
-
-            if False:
-                qr.add_data(id + ',' + description)
+            if description.startswith('--'):
+                row.cell("--")
+                row.cell('')
+                row.cell('')
             else:
+                qr = qrcode.QRCode(
+                    version=None,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=10,
+                    border=4,
+                )
+                id = str(uuid4.next())
+                logging.info("%s %s", id, description)
+
                 qr_data = {
                     'type': 'location',
                     'id': id,
@@ -100,12 +103,12 @@ def main(argv):
                 }
                 qr.add_data(json.dumps(qr_data))
 
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
+                qr.make(fit=True)
+                img = qr.make_image(fill_color="black", back_color="white")
 
-            row.cell(img=img.get_image())
-            row.cell(id)
-            row.cell(description)
+                row.cell(img=img.get_image())
+                row.cell(id)
+                row.cell(description)
 
     output_filename = pathlib.Path(args.input).with_suffix(".pdf")
     pdf.output(output_filename)

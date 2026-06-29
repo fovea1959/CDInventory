@@ -5,3 +5,10 @@ Storage Bag 3
 Storage Bag 4
 Storage Bag 5
 Storage Bag 6
+--
+Storage Bag 07
+Storage Bag 08
+Storage Bag 09
+Storage Bag 10
+Storage Bag 11
+Storage Bag 12
