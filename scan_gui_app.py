@@ -211,10 +211,13 @@ class Boss:
         self.current_cd.cd_title = self.selected_release['title']
         self.current_cd.cd_artists = ' / '.join(self.selected_release.get('artists', ''))
 
+        if self.current_cd not in self.dao.session:
+            self.dao.session.add(self.current_cd)
+
         self.logger.debug('CD before commit = %s', self.current_cd)
         self.dao.session.commit()
         self.logger.debug('CD after commit = %s', self.current_cd)
-        self.logger.verbose("updated from musicbrainz, saved CD", extra={'cd': self.current_cd.to_dict()})
+        self.logger.important("updated from musicbrainz, saved CD", extra={'cd': self.current_cd.to_dict()})
 
         self.g.gui.set_cd(self.current_cd)
 
@@ -248,15 +251,19 @@ class Boss:
         self.g.gui.set_musicbrainz_release(self.selected_release)
 
         if self.selected_release is not None:
+            self.dao.session.add(self.current_cd)
             self.logger.info("musicbrainz had %s", self.selected_release)
             self._update_current_cd_from_musicbrainz()
-            self.g.gui.happy()
+            if self.current_cd.cd_location_id is not None:
+                self.dao.session.commit()
+                self.logger.important("read barcode, saved CD", extra={'cd': self.current_cd.to_dict()})
+                self.g.gui.happy()
+            else:
+                self.logger.important("still need a location")
+                self.g.gui.sad()
         else:
             self.logger.important("Unable to find barcode '%s' in musicbrainz", barcode)
             self.g.gui.sad()
-
-        self.dao.session.commit()
-        self.logger.verbose("read barcode, saved CD", extra={'cd': self.current_cd.to_dict()})
 
         self.g.gui.set_cd(self.current_cd)
 
