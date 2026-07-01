@@ -1,4 +1,5 @@
 import datetime
+import functools
 import json
 import logging
 import queue
@@ -6,12 +7,28 @@ import threading
 import time
 
 import cv2
+import jsonpath_ng
 import musicbrainzngs
 import soundfile as sf
 import sounddevice as sd
 
-from CDInventoryEntities import CD, Location
+from CDInventoryEntities import CD, Location, MusicbrainzRelease
 from CDInventoryDao import DAO
+
+
+class ContentFilter(logging.Filter):
+    def __init__(self, banned_words):
+        super().__init__()
+        self.banned_words = banned_words
+
+    def filter(self, record):
+        # record.getMessage() gets the fully formatted string message
+        log_message = record.getMessage()
+
+        # Return False to drop the log if any banned word is found
+        if any(word in log_message for word in self.banned_words):
+            return False
+        return True  # Return True to keep the log
 
 
 class Beeper:
@@ -36,9 +53,13 @@ class Beeper:
 
 class MB:
     def __init__(self):
-        musicbrainzngs.set_useragent("MyCDLookupApp", "0.1", "https://github.com")
+        musicbrainzngs.set_useragent("CDInventory", "0.1", "dwegscheid@sbcglobal.net")
+        musicbrainzngs.set_rate_limit(limit_or_interval=1.5, new_requests=1)
         self.logger = logging.getLogger(self.__class__.__name__)
         # self.logger.setLevel(logging.DEBUG)
+        mb_logger = logging.getLogger("musicbrainzngs")
+        mb_filter = ContentFilter(banned_words=["uncaught attribute type-id", "uncaught <first-release-date>"])
+        mb_logger.addFilter(mb_filter)
 
     def lookup_by_barcode(self, barcode: str = '') -> dict | None:
         query = f'barcode:"{barcode}"'
@@ -48,8 +69,6 @@ class MB:
 
         if barcode[0] == '0':
             query = query + f' OR barcode:"{barcode[1:]}"'
-
-        # query = query + f' OR barcode:"5017261210685"'
 
         self.logger.info("query = '%s'", query)
 
@@ -75,7 +94,7 @@ class MB:
         return None
 
     def lookup_by_release_id(self, release_id: str = ''):
-        release = musicbrainzngs.get_release_by_id(release_id, includes=['artists', 'release-groups'])
+        release = musicbrainzngs.get_release_by_id(release_id, includes=['artists', 'labels', 'release-groups', 'recordings'])
         if release is not None:
             release = release.get('release')
         self.logger.info("got release %s", release)
@@ -232,3 +251,54 @@ class QueueHandler(logging.Handler):
 
     def emit(self, record):
         self.log_queue.put(record)
+
+
+@functools.lru_cache()
+def get_compiled_path(expression: str) -> jsonpath_ng.JSONPath:
+    try:
+        return jsonpath_ng.parse(expression)
+    except Exception as e:
+        # Reuses the exact same string inside the error handling block
+        raise ValueError(f"Failed parsing '{expression}'. Error: {e}")
+
+
+def extract_data(json_data: dict, path_string: str):
+    # This lookup is O(1) if already cached, otherwise it parses and saves it.
+    compiled_path = get_compiled_path(path_string)
+    return [match.value for match in compiled_path.find(json_data)]
+
+def extract_datum(json_data: dict, path_string: str):
+    # This lookup is O(1) if already cached, otherwise it parses and saves it.
+    compiled_path = get_compiled_path(path_string)
+    rv = [match.value for match in compiled_path.find(json_data)]
+    if len(rv) == 0:
+        return None
+    elif len(rv) > 1:
+        raise ValueError(f"{path_string} return too many entries")
+    else:
+        return rv[0]
+
+
+def fill_in_release_from_mb_json(release: MusicbrainzRelease, musicbrainz_release_dict: dict):
+    release.release_group_id = extract_datum(musicbrainz_release_dict, 'release-group.id')
+    release.title = extract_datum(musicbrainz_release_dict, 'title')
+    barcode = extract_datum(musicbrainz_release_dict, 'barcode')
+    release.barcode = None if barcode is None or len(barcode) == 0 else barcode
+    release.artists = extract_datum(musicbrainz_release_dict, 'artist-credit-phrase')
+
+    label_info_list = extract_datum(musicbrainz_release_dict, 'label-info-list')
+    ll = []
+    for label_info in label_info_list:
+        ll_and_cn = []
+        label_name = extract_datum(label_info, 'label.name')
+        if label_name is not None and label_name != '':
+            ll_and_cn.append(label_name)
+        catalog_number = extract_datum(label_info, 'catalog-number')
+        if catalog_number is not None and catalog_number != '':
+            ll_and_cn.append(catalog_number)
+        if len(ll_and_cn) > 0:
+            ll.append(": ".join(ll_and_cn))
+    release.catalog_numbers = "; ".join(ll) if len(ll) > 0 else None
+
+def compact_json(o) -> str:
+    return json.dumps(o, sort_keys=True, separators=(',', ':'))

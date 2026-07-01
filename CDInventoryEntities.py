@@ -1,12 +1,13 @@
 import datetime
+import json
 import typing
 
 import sqlalchemy.orm.exc
 
 from typing import List, Optional
 
-from sqlalchemy import Integer, Text, DateTime, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship
+from sqlalchemy import Integer, Text, DateTime, ForeignKey, event
+from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship, reconstructor
 from sqlalchemy.orm.base import Mapped
 
 
@@ -65,6 +66,7 @@ class CD(Base):
             barcode=self.cd_barcode,
             title=self.cd_title,
             artist=self.cd_artists,
+            release_id=self.cd_musicbrainz_release_id,
             location_id=self.cd_location_id
         )
 
@@ -72,18 +74,34 @@ class CD(Base):
 class MusicbrainzRelease(Base):
     __tablename__ = 'musicbrainz_releases'
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._raw_data = None       # do this so PyCharm does not complain about this attribute
+        self.zap_properties()
+
     release_id: Mapped[str] = mapped_column(Text, primary_key=True)
     release_group_id: Mapped[str] = mapped_column(Text)
     title: Mapped[str] = mapped_column(Text)
     barcode: Mapped[Optional[str]] = mapped_column(Text)
     artists: Mapped[str] = mapped_column(Text)
-    labels: Mapped[str] = mapped_column(Text)
-    catalog_numbers: Mapped[str] = mapped_column(Text)
-    media: Mapped[str] = mapped_column(Text)
+    catalog_numbers: Mapped[Optional[str]] = mapped_column(Text)
 
     json_text: Mapped[str] = mapped_column(Text)
 
-    last_updated: Mapped[datetime.datetime] = mapped_column(DateTime)
+    last_downloaded: Mapped[datetime.datetime] = mapped_column(DateTime)
+
+    @reconstructor
+    def zap_properties(self):
+        """This runs when SQLAlchemy loads the entity from the database."""
+        self._raw_data = None
+
+    @property
+    def raw_data(self):
+        if self._raw_data is None:
+            self._raw_data = json.loads(self.json_text)
+        return self._raw_data
+
+    # need to figure out how to zap _raw_data is the entity is reloaded
 
     def __repr__(self) -> str:
         return self._repr(
