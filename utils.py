@@ -75,7 +75,7 @@ class MB:
         return None
 
     def lookup_by_release_id(self, release_id: str = ''):
-        release = musicbrainzngs.get_release_by_id(release_id, includes=['artists'])
+        release = musicbrainzngs.get_release_by_id(release_id, includes=['artists', 'release-groups'])
         if release is not None:
             release = release.get('release')
         self.logger.info("got release %s", release)
@@ -170,7 +170,7 @@ def save_cd(dao: DAO, barcode, mb_cd, current_location):
         cd = CD()
         cd.cd_barcode = barcode
     cd.cd_title = mb_cd.get('title')
-    cd.cd_musicbrainz_id = musicbrainz_id
+    cd.cd_musicbrainz_release_id = musicbrainz_id
     cd.cd_artists = ' / '.join(mb_cd.get('artists'))
     if brand_new:
         dao.session.add(cd)

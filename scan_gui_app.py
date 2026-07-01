@@ -207,7 +207,7 @@ class Boss:
         if self.current_cd is None or self.selected_release is None:
             self.g.gui.sad()
             return
-        self.current_cd.cd_musicbrainz_id = self.selected_release['id']
+        self.current_cd.cd_musicbrainz_release_id = self.selected_release['id']
         self.current_cd.cd_title = self.selected_release['title']
         self.current_cd.cd_artists = ' / '.join(self.selected_release.get('artists', ''))
 
@@ -243,8 +243,8 @@ class Boss:
         if self.selected_location is not None:
             self.current_cd.cd_location_id = self.selected_location.location_id
 
-        if self.current_cd.cd_musicbrainz_id is not None:
-            self.selected_release = self.mb.lookup_by_release_id(self.current_cd.cd_musicbrainz_id)
+        if self.current_cd.cd_musicbrainz_release_id is not None:
+            self.selected_release = self.mb.lookup_by_release_id(self.current_cd.cd_musicbrainz_release_id)
         else:
             self.selected_release = self.mb.lookup_by_barcode(barcode)
 
@@ -445,7 +445,7 @@ class CDInventoryApp(CDInventoryGenericApp):
             self.set_text_field(self.TV_CD_LOCATION, '')
         else:
             self.set_text_field(self.TV_CD_BARCODE, cd.cd_barcode)
-            self.set_text_field(self.TV_CD_RELEASE_ID, cd.cd_musicbrainz_id or '')
+            self.set_text_field(self.TV_CD_RELEASE_ID, cd.cd_musicbrainz_release_id or '')
             self.set_text_field(self.TV_CD_RELEASE_TITLE, cd.cd_title or '')
             self.set_text_field(self.TV_CD_RELEASE_ARTIST, cd.cd_artists or '')
             self.set_text_field(self.TV_CD_LOCATION_ID, cd.cd_location_id or '')

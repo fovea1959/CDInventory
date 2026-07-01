@@ -54,7 +54,7 @@ class CD(Base):
     cd_artists: Mapped[Optional[str]] = mapped_column(Text)
     cd_last_seen: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
 
-    cd_musicbrainz_id: Mapped[Optional[str]] = mapped_column(Text, unique=True)
+    cd_musicbrainz_release_id: Mapped[Optional[str]] = mapped_column(Text, unique=True)
 
     cd_location_id: Mapped[Optional[str]] = mapped_column(ForeignKey("locations.location_id"), nullable=True)
     cd_location: Mapped[Optional[Location]] = relationship("Location", back_populates="location_contents")
@@ -66,4 +66,32 @@ class CD(Base):
             title=self.cd_title,
             artist=self.cd_artists,
             location_id=self.cd_location_id
+        )
+
+
+class MusicbrainzRelease(Base):
+    __tablename__ = 'musicbrainz_releases'
+
+    release_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    release_group_id: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    barcode: Mapped[Optional[str]] = mapped_column(Text)
+    artists: Mapped[str] = mapped_column(Text)
+    labels: Mapped[str] = mapped_column(Text)
+    catalog_numbers: Mapped[str] = mapped_column(Text)
+    media: Mapped[str] = mapped_column(Text)
+
+    json_text: Mapped[str] = mapped_column(Text)
+
+    last_updated: Mapped[datetime.datetime] = mapped_column(DateTime)
+
+    def __repr__(self) -> str:
+        return self._repr(
+            release_id=self.release_id,
+            barcode=self.barcode,
+            title=self.title,
+            artists=self.artists,
+            labels=self.labels,
+            catalog_numbers=self.catalog_numbers,
+            release_group_id = self.release_group_id,
         )

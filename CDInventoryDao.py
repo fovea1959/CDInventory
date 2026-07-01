@@ -47,7 +47,7 @@ class DAO:
         return rv
 
     def get_cd_by_musicbrainz_id(self, musicbrainz_id: str = '') -> Optional[CD]:
-        query = sqlalchemy.select(CD).where(CD.cd_musicbrainz_id == musicbrainz_id)
+        query = sqlalchemy.select(CD).where(CD.cd_musicbrainz_release_id == musicbrainz_id)
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
@@ -55,8 +55,8 @@ class DAO:
 # noinspection PyUnusedLocal
 def main(argv):
     try:
-        os.remove(defaultFilename)
-        # pass
+        #os.remove(defaultFilename)
+        pass
     except FileNotFoundError:
         pass
     Base.metadata.create_all(engine())
