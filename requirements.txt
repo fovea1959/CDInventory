@@ -13,3 +13,4 @@ pygubu~=0.40
 pygubu-designer~=0.43.3
 pillow~=12.2.0
 python-json-logger
+python-dateutil>=2.9.0
