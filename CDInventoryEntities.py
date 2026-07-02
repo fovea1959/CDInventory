@@ -71,24 +71,17 @@ class CD(Base):
         )
 
 
-class MusicbrainzRelease(Base):
-    __tablename__ = 'musicbrainz_releases'
+class BaseWithJson(Base):
+    __abstract__ = True
+
+    json_text: Mapped[str] = mapped_column(Text)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._raw_data = None       # do this so PyCharm does not complain about this attribute
         self.zap_properties()
 
-    release_id: Mapped[str] = mapped_column(Text, primary_key=True)
-    release_group_id: Mapped[str] = mapped_column(Text)
-    title: Mapped[str] = mapped_column(Text)
-    barcode: Mapped[Optional[str]] = mapped_column(Text)
-    artists: Mapped[str] = mapped_column(Text)
-    catalog_numbers: Mapped[Optional[str]] = mapped_column(Text)
-
-    json_text: Mapped[str] = mapped_column(Text)
-
-    last_downloaded: Mapped[datetime.datetime] = mapped_column(DateTime)
+    # need to figure out how to zap _raw_data if the entity is reloaded
 
     @reconstructor
     def zap_properties(self):
@@ -101,7 +94,42 @@ class MusicbrainzRelease(Base):
             self._raw_data = json.loads(self.json_text)
         return self._raw_data
 
-    # need to figure out how to zap _raw_data is the entity is reloaded
+
+class MP3(BaseWithJson):
+    __tablename__ = 'mp3s'
+
+    path: Mapped[str] = mapped_column(Text, primary_key=True)
+    title: Mapped[Optional[str]] = mapped_column(Text)
+    track_artists: Mapped[Optional[str]] = mapped_column(Text)
+    album_artists: Mapped[Optional[str]] = mapped_column(Text)
+    release_id: Mapped[Optional[str]] = mapped_column(Text)
+    release_group_id: Mapped[Optional[str]] = mapped_column(Text)
+    track_id: Mapped[Optional[str]] = mapped_column(Text)
+    recording_id: Mapped[Optional[str]] = mapped_column(Text)
+    mtime: Mapped[datetime.datetime] = mapped_column(DateTime)
+    encoded_time: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+
+    updated_time: Mapped[datetime.datetime] = mapped_column(DateTime)
+
+    def __repr__(self) -> str:
+        return self._repr(
+            path=self.path,
+            title=self.title,
+            release_id=self.release_id,
+        )
+
+
+class MusicbrainzRelease(BaseWithJson):
+    __tablename__ = 'musicbrainz_releases'
+
+    release_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    release_group_id: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    barcode: Mapped[Optional[str]] = mapped_column(Text)
+    artists: Mapped[str] = mapped_column(Text)
+    catalog_numbers: Mapped[Optional[str]] = mapped_column(Text)
+
+    last_downloaded: Mapped[datetime.datetime] = mapped_column(DateTime)
 
     def __repr__(self) -> str:
         return self._repr(
@@ -109,7 +137,6 @@ class MusicbrainzRelease(Base):
             barcode=self.barcode,
             title=self.title,
             artists=self.artists,
-            labels=self.labels,
             catalog_numbers=self.catalog_numbers,
             release_group_id = self.release_group_id,
         )
