@@ -19,13 +19,14 @@ def engine(filename: str = '', echo: bool = False):
 
 
 class DAO:
-    def __init__(self, db_filename: str = ''):
+    def __init__(self, db_filename: str = '', echo: bool = False):
         self.session = None
         self.logger = logging.getLogger('DB')
         self.db_filename = db_filename
+        self.echo = echo
 
     def __enter__(self):
-        self.session = sqlalchemy.orm.Session(engine(self.db_filename))
+        self.session = sqlalchemy.orm.Session(engine(self.db_filename, echo=self.echo))
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
