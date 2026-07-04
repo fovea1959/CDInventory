@@ -54,7 +54,7 @@ class RepeatableUuid4:
 
 def main(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('input')
+    parser.add_argument('inputs', nargs='+')
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args(argv)
 
@@ -63,70 +63,79 @@ def main(argv):
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    with open(args.input, 'r') as f:
-        descriptions = [l.strip() for l in f]
-
-    print(descriptions)
-
     all_of_them = []
 
-    uuid4 = RepeatableUuid4()   # seed 42 will have start with bdd640fb-0667-4ad1-9c80-317fa3b1799d
+    with CDInventoryDao.DAO(echo=True) as dao:
+        stmt = select(Location)
+        results = dao.session.scalars(stmt).all()
+        for result in results:
+            print(result)
 
-    # 1. Initialize the PDF document (Portrait mode, Millimeters, letter size)
-    pdf = CustomPDF(orientation="P", unit="mm", format="letter")
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Helvetica", "", 10)
+    for filename in args.inputs:
+        with open(filename, 'r') as f:
+            descriptions = [l.strip() for l in f]
 
-    with pdf.table(first_row_as_headings=False, col_widths=(1, 3, 3), borders_layout="HORIZONTAL_LINES") as table:
-        for description in descriptions:
-            description = description.strip()
-            if description.startswith('#'):
-                continue
+        print(descriptions)
 
-            if description.startswith('!'):
-                description = description[1:].strip()
-                seed = int(description)
-                uuid4 = RepeatableUuid4(seed=42)
-                continue
+        uuid4 = RepeatableUuid4()   # seed 42 will have start with bdd640fb-0667-4ad1-9c80-317fa3b1799d
 
-            row = table.row(min_height=35)
+        # 1. Initialize the PDF document (Portrait mode, Millimeters, letter size)
+        pdf = CustomPDF(orientation="P", unit="mm", format="letter")
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_font("Helvetica", "", 10)
 
-            if description.startswith('--'):
-                row.cell("--")
-                row.cell('')
-                row.cell('')
-            else:
-                qr = qrcode.QRCode(
-                    version=None,
-                    error_correction=qrcode.constants.ERROR_CORRECT_L,
-                    box_size=10,
-                    border=4,
-                )
-                id = str(uuid4.next())
-                logging.info("%s %s", id, description)
+        with pdf.table(first_row_as_headings=False, col_widths=(1, 3, 3), borders_layout="HORIZONTAL_LINES") as table:
+            for description in descriptions:
+                description = description.strip()
+                if description.startswith('#'):
+                    continue
 
-                all_of_them.append((id, description))
+                if description.startswith('!'):
+                    description = description[1:].strip()
+                    seed = int(description)
+                    uuid4 = RepeatableUuid4(seed=seed)
+                    continue
 
-                qr_data = {
-                    'type': 'location',
-                    'id': id,
-                    'description': description
-                }
-                qr.add_data(json.dumps(qr_data))
+                row = table.row(min_height=35)
 
-                qr.make(fit=True)
-                img = qr.make_image(fill_color="black", back_color="white")
+                if description.startswith('--'):
+                    row.cell("--")
+                    row.cell('')
+                    row.cell('')
+                else:
+                    qr = qrcode.QRCode(
+                        version=None,
+                        error_correction=qrcode.constants.ERROR_CORRECT_L,
+                        box_size=10,
+                        border=4,
+                    )
+                    id = str(uuid4.next())
+                    logging.info("%s %s", id, description)
 
-                row.cell(img=img.get_image())
-                row.cell(id)
-                row.cell(description)
+                    all_of_them.append((id, description))
 
-    output_filename = pathlib.Path(args.input).with_suffix(".pdf")
-    pdf.output(output_filename)
-    logging.info("%s successfully created!", output_filename)
+                    qr_data = {
+                        'type': 'location',
+                        'id': id,
+                        'description': description
+                    }
+                    qr.add_data(json.dumps(qr_data))
 
-    with CDInventoryDao.DAO() as dao:
+                    qr.make(fit=True)
+                    img = qr.make_image(fill_color="black", back_color="white")
+
+                    row.cell(img=img.get_image())
+                    row.cell(id)
+                    row.cell(description)
+
+        output_filename = pathlib.Path(filename).with_suffix(".pdf")
+        pdf.output(output_filename)
+        logging.info("%s successfully created!", output_filename)
+
+
+
+    with CDInventoryDao.DAO(echo=args.verbose) as dao:
         for id, description in all_of_them:
             # print(id, description)
             location = dao.get_location(id)
@@ -136,6 +145,13 @@ def main(argv):
                 dao.session.add(location)
             location.location_description = description
         dao.session.commit()
+
+        stmt = select(Location)
+
+        # 2. Execute and fetch all entities as a Python list
+        results = dao.session.scalars(stmt).all()
+        for result in results:
+            print(result)
 
 
 if __name__ == '__main__':
