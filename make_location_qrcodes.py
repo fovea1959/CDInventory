@@ -10,6 +10,14 @@ import qrcode
 
 from fpdf import FPDF, XPos, YPos
 
+from dateutil import parser
+from sqlalchemy import select
+
+import CDInventoryDao
+import utils
+from CDInventoryEntities import MP3, Location
+from utils import extract_data, extract_datum
+
 
 class CustomPDF(FPDF):
     def header(self):
@@ -60,6 +68,8 @@ def main(argv):
 
     print(descriptions)
 
+    all_of_them = []
+
     uuid4 = RepeatableUuid4()   # seed 42 will have start with bdd640fb-0667-4ad1-9c80-317fa3b1799d
 
     # 1. Initialize the PDF document (Portrait mode, Millimeters, letter size)
@@ -96,6 +106,8 @@ def main(argv):
                 id = str(uuid4.next())
                 logging.info("%s %s", id, description)
 
+                all_of_them.append((id, description))
+
                 qr_data = {
                     'type': 'location',
                     'id': id,
@@ -113,6 +125,17 @@ def main(argv):
     output_filename = pathlib.Path(args.input).with_suffix(".pdf")
     pdf.output(output_filename)
     logging.info("%s successfully created!", output_filename)
+
+    with CDInventoryDao.DAO() as dao:
+        for id, description in all_of_them:
+            # print(id, description)
+            location = dao.get_location(id)
+            if location is None:
+                location = Location()
+                location.location_id = id
+                dao.session.add(location)
+            location.location_description = description
+        dao.session.commit()
 
 
 if __name__ == '__main__':

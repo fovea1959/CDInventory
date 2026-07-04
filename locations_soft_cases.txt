@@ -1,10 +1,10 @@
 ! 817496027103
-Storage Bag 1
-Storage Bag 2
-Storage Bag 3
-Storage Bag 4
-Storage Bag 5
-Storage Bag 6
+Storage Bag 01
+Storage Bag 02
+Storage Bag 03
+Storage Bag 04
+Storage Bag 05
+Storage Bag 06
 --
 Storage Bag 07
 Storage Bag 08
