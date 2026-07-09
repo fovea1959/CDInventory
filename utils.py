@@ -281,6 +281,8 @@ def extract_datum(json_data: dict, path_string: str):
 
 def fill_in_release_from_mb_json(release: MusicbrainzRelease, musicbrainz_release_dict: dict):
     release.release_group_id = extract_datum(musicbrainz_release_dict, 'release-group.id')
+    if release.release_group_id is None:
+        logging.warning("could not get release_group_id in data from Musicbrainz")
     release.title = extract_datum(musicbrainz_release_dict, 'title')
     barcode = extract_datum(musicbrainz_release_dict, 'barcode')
     release.barcode = None if barcode is None or len(barcode) == 0 else barcode

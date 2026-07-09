@@ -100,3 +100,4 @@ layout_issue_simple_*.ui
 *.pdf
 *.sql
 dbeaver/
+backups/
