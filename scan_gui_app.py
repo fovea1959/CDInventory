@@ -241,7 +241,10 @@ class Boss:
         self.current_cd.cd_last_seen = datetime.datetime.now()
 
         if self.selected_location is not None:
-            self.current_cd.cd_location_id = self.selected_location.location_id
+            if self.current_cd.cd_location_id is None:
+                self.current_cd.cd_location_id = self.selected_location.location_id
+            else:
+                self.logger.warning("This CD already has a location, keeping it")
 
         if self.current_cd.cd_musicbrainz_release_id is not None:
             self.selected_release = self.mb.lookup_by_release_id(self.current_cd.cd_musicbrainz_release_id)
