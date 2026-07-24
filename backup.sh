@@ -4,7 +4,7 @@
 DB_FILE="CDInventory.db"
 
 TS=$(date +%Y%m%d-%H%M%S)
-OUTPUT_FILE="backups/${DB_FILE}_${TS}_data_only.sql"
+OUTPUT_FILE="cdinventory_backups/${DB_FILE}_${TS}_data_only.sql"
 
 # Clear any existing backup file
 > "$OUTPUT_FILE"
@@ -20,7 +20,7 @@ done
 
 echo "Data only backup complete! Saved to $OUTPUT_FILE"
 
-OUTPUT_FILE="backups/${DB_FILE}_${TS}_full.sql"
+OUTPUT_FILE="cdinventory_backups/${DB_FILE}_${TS}_full.sql"
 
 sqlite3 "$DB_FILE" .dump > "$OUTPUT_FILE"
 
