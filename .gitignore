@@ -101,3 +101,4 @@ layout_issue_simple_*.ui
 *.sql
 dbeaver/
 backups/
+q_gui_generic_app*.py

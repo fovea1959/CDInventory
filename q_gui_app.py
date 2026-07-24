@@ -1,19 +1,22 @@
 #!/usr/bin/python3
 
-import logging
+import csv
 import queue
 import sys
 
 from logging.handlers import RotatingFileHandler
 
-import tkinter as tk
 from tkinter import font as tkfont
+from typing import override
 
 from pythonjsonlogger.json import JsonFormatter
 
 import utils
+
 from CDInventoryDao import DAO
 from CDInventoryEntities import CD, Location
+
+from GFilterEditTable import *
 
 from q_gui_generic_app import QGuiGenericApp
 
@@ -44,10 +47,45 @@ class QGuiApp(QGuiGenericApp):
             else logging.Formatter('%(levelname)s %(name)s %(message)s')
         self.mainwindow.after(100, self.poll_log_queue)
 
+        self.setup_cds_frame()
+
         self.logger.info("__init__ successful")
 
+    @override
     def menuitem_test(self, itemid):
         self.logger.important("menuitem_test hit: %s", itemid)
+
+    def setup_cds_frame(self):
+        d = []
+        locations = set()
+        with open('c3.csv', newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                d.append(row)
+                locations.add(row['location_description'])
+        locations = sorted(locations)
+
+        dropdown_converter = CodeAndTextContainer()
+        for location in locations:
+            dropdown_converter.add(location, location + "!")
+
+        column_descriptions = [
+            ColumnDescription(label="Title", read_only=True, getter_setter=DGS("cd_title")),
+            ColumnDescription(label="Artist", read_only=True, getter_setter=DGS("cd_artists")),
+            ColumnDescription(label="Location", getter_setter=DGS("location_description"),
+                                dropdown_provider=dropdown_converter,
+                                type_converter=dropdown_converter),
+        ]
+
+        # Component Initialization
+        tab_container = self.builder.get_object("cd_frame")
+        table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
+        # table_widget.data_interface = GFilterEditTable.ObjectDataInterface(filter_edit_table=table_widget, filename="GFilterEditTable.csv", clazz=dict)
+
+        table_widget.data_store = d
+        table_widget.populate_tree()
+
+        table_widget.pack(fill="both", expand=True)
 
     def center_window(self):
         # Force an update of idle tasks to get accurate dimensions before mapping
@@ -165,13 +203,6 @@ def main(argv):
     queue_handler.setLevel(IMPORTANT_LEVEL_NUM)
     logger.addHandler(queue_handler)
 
-    logger.debug("debug")
-    logger.verbose("verbose")
-    logger.info("info")
-    logger.important("important")
-    logger.warning("warning")
-    logger.error("error")
-
     g = G()
 
     try:
@@ -190,5 +221,5 @@ def main(argv):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stderr,
-                        format="%(levelname)-9s l=%(name)-15s t=%(threadName)-10s %(message)s")
+                        format="%(levelname)-9s %(name)-15s %(message)s")
     main(sys.argv[1:])
