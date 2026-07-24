@@ -1,0 +1,194 @@
+#!/usr/bin/python3
+
+import logging
+import queue
+import sys
+
+from logging.handlers import RotatingFileHandler
+
+import tkinter as tk
+from tkinter import font as tkfont
+
+from pythonjsonlogger.json import JsonFormatter
+
+import utils
+from CDInventoryDao import DAO
+from CDInventoryEntities import CD, Location
+
+from q_gui_generic_app import QGuiGenericApp
+
+
+class G:
+    def __init__(self):
+        self.gui: QGuiApp | None = None
+        self.mb = utils.MB()
+        self.die = False
+
+
+class QGuiApp(QGuiGenericApp):
+    def __init__(self, master=None, g: G = None, log_queue: queue.Queue = None, logging_formatter=None):
+        super().__init__(master)
+        self.g = g
+        g.gui = self
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        self.running = False
+
+        self.log_text = self.builder.get_object('log_text', master)
+        current_font = tkfont.Font(font=self.log_text.cget("font"))
+        bold_font = tkfont.Font(family=current_font.actual("family"), size=current_font.actual("size"), weight="bold")
+        self.log_text.tag_configure("warning", foreground="red")
+        self.log_text.tag_configure("error", foreground="red", font=bold_font)
+        self.log_queue = log_queue
+        self.logging_formatter = logging_formatter if logging_formatter \
+            else logging.Formatter('%(levelname)s %(name)s %(message)s')
+        self.mainwindow.after(100, self.poll_log_queue)
+
+        self.logger.info("__init__ successful")
+
+    def menuitem_test(self, itemid):
+        self.logger.important("menuitem_test hit: %s", itemid)
+
+    def center_window(self):
+        # Force an update of idle tasks to get accurate dimensions before mapping
+        self.mainwindow.update_idletasks()
+
+        # Get screen dimensions
+        screen_width = self.mainwindow.winfo_screenwidth()
+        screen_height = self.mainwindow.winfo_screenheight()
+
+        # Get window dimensions
+        win_width = self.mainwindow.winfo_width()
+        win_height = self.mainwindow.winfo_height()
+
+        # Calculate X and Y coordinates
+        x = (screen_width // 2) - (win_width // 2)
+        y = (screen_height // 2) - (win_height // 2)
+
+        # Set the geometry
+        self.mainwindow.geometry(f'{win_width}x{win_height}+{x}+{y}')
+
+    def run(self):
+        self.running = True
+        self.logger.info("centering window")
+        self.center_window()
+        self.logger.info("starting")
+        super().run()
+        self.running = False
+        self.logger.info("finished")
+
+    def toast(self, message, duration):
+        # Create a borderless popup window
+        toast = tk.Toplevel(self.mainwindow)
+        toast.overrideredirect(True)
+
+        # Style the window
+        toast.config(bg="#333333")
+        label = tk.Label(toast, text=message, fg="white", bg="#333333", padx=15, pady=10, font=("Arial", 10))
+        label.pack()
+
+        # Position the toast window relative to the main window
+        self.mainwindow.update_idletasks()
+        x = self.mainwindow.winfo_x() + (self.mainwindow.winfo_width() // 2) - (toast.winfo_reqwidth() // 2)
+        y = self.mainwindow.winfo_y() + self.mainwindow.winfo_height() - 70
+        toast.geometry(f"+{x}+{y}")
+
+        # Automatically close the toast window after the delay
+        toast.after(duration, toast.destroy)
+
+    def poll_log_queue(self):
+        """Checks the queue and writes records to the text widget."""
+        while True:
+            try:
+                # Look for records without blocking the GUI loop
+                record = self.log_queue.get_nowait()
+            except queue.Empty:
+                break
+            else:
+                # Format and append message to widget
+                message = self.logging_formatter.format(record)
+
+                self.log_text.configure(state='normal')
+                tag = record.levelname.lower()
+                self.log_text.insert(tk.END, message + '\n', tag)
+                self.log_text.configure(state='disabled')
+
+                # Autoscroll to the absolute bottom
+                self.log_text.yview(tk.END)
+
+        # Re-queue this polling method after 100 milliseconds
+        self.mainwindow.after(100, self.poll_log_queue)
+
+
+VERBOSE_LEVEL_NUM = 15
+IMPORTANT_LEVEL_NUM = 25
+
+
+def verbose(self, message, *args, **kws):
+    if self.isEnabledFor(VERBOSE_LEVEL_NUM):
+        # Yes, logger._log is a semi-private API, but this is the standard way
+        self._log(VERBOSE_LEVEL_NUM, message, args, **kws)
+
+
+def important(self, message, *args, **kws):
+    if self.isEnabledFor(IMPORTANT_LEVEL_NUM):
+        # Yes, logger._log is a semi-private API, but this is the standard way
+        self._log(IMPORTANT_LEVEL_NUM, message, args, **kws)
+
+
+def setup_custom_log_level():
+    logging.addLevelName(VERBOSE_LEVEL_NUM, "VERBOSE")
+    logging.Logger.verbose = verbose
+    logging.addLevelName(IMPORTANT_LEVEL_NUM, "IMPORTANT")
+    logging.Logger.important = important
+
+
+def main(argv):
+    setup_custom_log_level()
+
+    logger = logging.getLogger('')
+    logger.setLevel(VERBOSE_LEVEL_NUM)
+
+    file_handler = RotatingFileHandler(
+        "q_gui.log",
+        maxBytes=(10 * 1024 * 1024),
+        backupCount=5
+    )
+    file_handler.setFormatter(JsonFormatter(
+        fmt="{levelname} {message} {name} {asctime} {threadName} {levelno}", style="{"
+    ))
+    file_handler.setLevel(VERBOSE_LEVEL_NUM)
+    logger.addHandler(file_handler)
+
+    log_queue = queue.Queue()
+    queue_handler = utils.QueueHandler(log_queue=log_queue)
+    queue_handler.setLevel(IMPORTANT_LEVEL_NUM)
+    logger.addHandler(queue_handler)
+
+    logger.debug("debug")
+    logger.verbose("verbose")
+    logger.info("info")
+    logger.important("important")
+    logger.warning("warning")
+    logger.error("error")
+
+    g = G()
+
+    try:
+        app = QGuiApp(g=g, log_queue=log_queue)
+        app.run()
+    except KeyboardInterrupt:
+        logger.important("received KeyboardInterrupt")
+    except Exception as exc:
+        logger.error("received %s", exc, exc_info=exc)
+    finally:
+        logger.important("telling everyone to die")
+        g.die = True
+
+    logger.info('all done!')
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, stream=sys.stderr,
+                        format="%(levelname)-9s l=%(name)-15s t=%(threadName)-10s %(message)s")
+    main(sys.argv[1:])

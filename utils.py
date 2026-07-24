@@ -267,6 +267,7 @@ def extract_data(json_data: dict, path_string: str):
     compiled_path = get_compiled_path(path_string)
     return [match.value for match in compiled_path.find(json_data)]
 
+
 def extract_datum(json_data: dict, path_string: str):
     # This lookup is O(1) if already cached, otherwise it parses and saves it.
     compiled_path = get_compiled_path(path_string)
@@ -301,6 +302,7 @@ def fill_in_release_from_mb_json(release: MusicbrainzRelease, musicbrainz_releas
         if len(ll_and_cn) > 0:
             ll.append(": ".join(ll_and_cn))
     release.catalog_numbers = "; ".join(ll) if len(ll) > 0 else None
+
 
 def compact_json(o) -> str:
     return json.dumps(o, sort_keys=True, separators=(',', ':'))
