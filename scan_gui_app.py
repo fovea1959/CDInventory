@@ -21,6 +21,7 @@ import pyzbar.pyzbar
 from PIL import Image, ImageTk
 
 from playwright.sync_api import sync_playwright
+# noinspection PyProtectedMember
 from playwright._impl._errors import TargetClosedError
 
 from pythonjsonlogger.json import JsonFormatter
@@ -197,7 +198,7 @@ class Boss:
         else:
             # unknown barcode type
             self.logger.warning("can't handle %s scan '%s'", barcode_type, barcode,)
-            #self.g.gui.toast(f"Bad {barcode_type} scan '{barcode}'")
+            # self.g.gui.toast(f"Bad {barcode_type} scan '{barcode}'")
             self.g.gui.sad()
 
     def update_current_cd_from_musicbrainz(self):
@@ -247,6 +248,7 @@ class Boss:
                 self.logger.warning("This CD already has a location, keeping it")
 
         if self.current_cd.cd_musicbrainz_release_id is not None:
+            # noinspection PyTypeChecker
             self.selected_release = self.mb.lookup_by_release_id(self.current_cd.cd_musicbrainz_release_id)
         else:
             self.selected_release = self.mb.lookup_by_barcode(barcode)
@@ -319,7 +321,7 @@ class CvBarcode:
 
                 # Process: Convert to grayscale and blur
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                #cv2.imshow('Gray', gray)
+                # cv2.imshow('Gray', gray)
 
                 pil_image = PIL.Image.fromarray(gray)
                 if self.g.gui is not None:  # might not be there yet
@@ -501,23 +503,23 @@ class CDInventoryApp(CDInventoryGenericApp):
         self._do(lambda: self._toast(message, duration))
 
     def _toast(self, message, duration):
-            # Create a borderless popup window
-            toast = tk.Toplevel(self.mainwindow)
-            toast.overrideredirect(True)
+        # Create a borderless popup window
+        toast = tk.Toplevel(self.mainwindow)
+        toast.overrideredirect(True)
 
-            # Style the window
-            toast.config(bg="#333333")
-            label = tk.Label(toast, text=message, fg="white", bg="#333333", padx=15, pady=10, font=("Arial", 10))
-            label.pack()
+        # Style the window
+        toast.config(bg="#333333")
+        label = tk.Label(toast, text=message, fg="white", bg="#333333", padx=15, pady=10, font=("Arial", 10))
+        label.pack()
 
-            # Position the toast window relative to the main window
-            self.mainwindow.update_idletasks()
-            x = self.mainwindow.winfo_x() + (self.mainwindow.winfo_width() // 2) - (toast.winfo_reqwidth() // 2)
-            y = self.mainwindow.winfo_y() + self.mainwindow.winfo_height() - 70
-            toast.geometry(f"+{x}+{y}")
+        # Position the toast window relative to the main window
+        self.mainwindow.update_idletasks()
+        x = self.mainwindow.winfo_x() + (self.mainwindow.winfo_width() // 2) - (toast.winfo_reqwidth() // 2)
+        y = self.mainwindow.winfo_y() + self.mainwindow.winfo_height() - 70
+        toast.geometry(f"+{x}+{y}")
 
-            # Automatically close the toast window after the delay
-            toast.after(duration, toast.destroy)
+        # Automatically close the toast window after the delay
+        toast.after(duration, toast.destroy)
 
     def happy(self):
         pass
@@ -572,6 +574,7 @@ def setup_custom_log_level():
     logging.Logger.important = important
 
 
+# noinspection PyUnusedLocal
 def main(argv):
     setup_custom_log_level()
 

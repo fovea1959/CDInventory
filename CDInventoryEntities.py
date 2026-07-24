@@ -6,7 +6,7 @@ import sqlalchemy.orm.exc
 
 from typing import List, Optional
 
-from sqlalchemy import Integer, Text, DateTime, ForeignKey, event
+from sqlalchemy import Integer, Text, DateTime, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship, reconstructor
 from sqlalchemy.orm.base import Mapped
 
@@ -29,6 +29,7 @@ class Base(DeclarativeBase):
 
     def to_dict(self):
         """Converts the mapped columns of the model instance into a dictionary."""
+        # noinspection PyTypeChecker
         return {col.name: getattr(self, col.name) for col in self.__table__.columns}
 
 
@@ -138,5 +139,5 @@ class MusicbrainzRelease(BaseWithJson):
             title=self.title,
             artists=self.artists,
             catalog_numbers=self.catalog_numbers,
-            release_group_id = self.release_group_id,
+            release_group_id=self.release_group_id,
         )

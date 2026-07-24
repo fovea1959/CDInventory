@@ -1,28 +1,25 @@
 #!/usr/bin/python3
 
-import csv
 import json
 import queue
 import sys
 
-from dataclasses import dataclass, asdict
+# noinspection PyUnresolvedReferences
+from dataclasses import asdict, dataclass
 
 from logging.handlers import RotatingFileHandler
 
 from tkinter import font as tkfont
-from typing import override
 
+import sqlalchemy
 from pythonjsonlogger.json import JsonFormatter
 
+import CDInventoryDao
 import utils
-
-from CDInventoryDao import DAO
-from CDInventoryEntities import CD, Location
 
 from GFilterEditTable import *
 
 from q_gui_generic_app import QGuiGenericApp
-
 
 PREFS_FILE_NAME = "q_gui_prefs.json"
 
@@ -38,6 +35,31 @@ class G:
         self.gui: QGuiApp | None = None
         self.mb = utils.MB()
         self.preferences = Preferences()
+        self.dao = None
+
+
+class EntityDataInterface(DataInterface):
+    def __init__(self, g=None):
+        self.g = g
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    @override
+    def save_data(self, data):
+        for obj in self.g.dao.session.dirty:
+            inspector = sqlalchemy.inspect(obj)
+
+            pk_value = inspector.identity or "Transient"
+
+            for attr in inspector.attrs:
+                if attr.history.has_changes():
+                    self.logger.important("%s (PK: %s) -> '%s' changed: %s ➡ %s",
+                                          obj.__class__.__name__, pk_value, attr.key, attr.history.deleted, attr.value)
+
+        self.g.dao.session.commit()
+
+    @override
+    def delete_data(self, data):
+        raise Exception("shouldn't get called")
 
 
 class QGuiApp(QGuiGenericApp):
@@ -87,42 +109,31 @@ class QGuiApp(QGuiGenericApp):
 
     def setup_cds_frame(self):
         d = []
-        locations = set()
-        with open('c3.csv', newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                d.append(row)
-                locations.add(row['location_description'])
-        locations = sorted(locations)
+
+        for cd in self.g.dao.get_all_cds():
+            d.append(cd)
 
         dropdown_converter = CodeAndTextContainer()
-        for location in locations:
-            dropdown_converter.add(location, location + "!")
+        for location in self.g.dao.get_all_locations():
+            dropdown_converter.add(location.location_id, location.location_description)
 
         column_descriptions = [
-            ColumnDescription(label="Title", read_only=True, getter_setter=DGS("cd_title")),
-            ColumnDescription(label="Artist", read_only=True, getter_setter=DGS("cd_artists")),
-            ColumnDescription(label="Location", getter_setter=DGS("location_description"),
-                                dropdown_provider=dropdown_converter,
-                                type_converter=dropdown_converter),
+            ColumnDescription(label="Title", read_only=True, getter_setter=CGS("cd_title")),
+            ColumnDescription(label="Artist", read_only=True, getter_setter=CGS("cd_artists")),
+            ColumnDescription(label="Location", getter_setter=CGS("cd_location_id"),
+                              dropdown_provider=dropdown_converter, type_converter=dropdown_converter
+                              ),
         ]
 
         # Component Initialization
         tab_container = self.builder.get_object("cd_frame")
         table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
-        # table_widget.data_interface = GFilterEditTable.ObjectDataInterface(filter_edit_table=table_widget, filename="GFilterEditTable.csv", clazz=dict)
+        table_widget.data_interface = EntityDataInterface(g=self.g)
 
         table_widget.data_store = d
         table_widget.populate_tree()
 
         table_widget.pack(fill="both", expand=True)
-
-    def run(self):
-        self.running = True
-        self.logger.info("starting")
-        super().run()
-        self.running = False
-        self.logger.info("finished")
 
     def toast(self, message, duration):
         # Create a borderless popup window
@@ -190,6 +201,7 @@ def setup_custom_log_level():
     logging.Logger.important = important
 
 
+# noinspection PyUnusedLocal
 def main(argv):
     setup_custom_log_level()
 
@@ -213,6 +225,7 @@ def main(argv):
     logger.addHandler(queue_handler)
 
     g = G()
+
     try:
         with open(PREFS_FILE_NAME, "r") as f:
             data = json.load(f)
@@ -220,16 +233,16 @@ def main(argv):
     except Exception as exc:
         logger.warning("unable to load prefs from %s: %s", PREFS_FILE_NAME, exc)
 
-    try:
-        app = QGuiApp(g=g, log_queue=log_queue)
-        app.run()
-    except KeyboardInterrupt:
-        logger.important("received KeyboardInterrupt")
-    except Exception as exc:
-        logger.error("received %s", exc, exc_info=exc)
-    finally:
-        logger.important("telling everyone to die")
-        g.die = True
+    g.dao = CDInventoryDao.DAO()
+
+    with g.dao:
+        try:
+            app = QGuiApp(g=g, log_queue=log_queue)
+            app.run()
+        except KeyboardInterrupt:
+            logger.important("received KeyboardInterrupt")
+        except Exception as exc:
+            logger.error("received %s", exc, exc_info=exc)
 
     with open(PREFS_FILE_NAME, "w") as f:
         json.dump(asdict(g.preferences), f)

@@ -4,7 +4,6 @@ import json
 import logging
 import queue
 import threading
-import time
 
 import cv2
 import jsonpath_ng
@@ -94,7 +93,8 @@ class MB:
         return None
 
     def lookup_by_release_id(self, release_id: str = ''):
-        release = musicbrainzngs.get_release_by_id(release_id, includes=['artists', 'labels', 'release-groups', 'recordings'])
+        release = musicbrainzngs.get_release_by_id(release_id,
+                                                   includes=['artists', 'labels', 'release-groups', 'recordings'])
         if release is not None:
             release = release.get('release')
         self.logger.info("got release %s", release)

@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 
 import sqlalchemy
@@ -42,9 +41,19 @@ class DAO:
         rv = self.session.execute(query).scalar_one_or_none()
         return rv
 
+    def get_all_locations(self):
+        query = sqlalchemy.select(Location)
+        rv = self.session.scalars(query).all()
+        return rv
+
     def get_cd_by_barcode(self, barcode: str = '') -> Optional[CD]:
         query = sqlalchemy.select(CD).where(CD.cd_barcode == barcode)
         rv = self.session.execute(query).scalar_one_or_none()
+        return rv
+
+    def get_all_cds(self):
+        query = sqlalchemy.select(CD)
+        rv = self.session.scalars(query).all()
         return rv
 
     def get_cd_by_musicbrainz_id(self, musicbrainz_id: str = '') -> Optional[CD]:
@@ -55,11 +64,6 @@ class DAO:
 
 # noinspection PyUnusedLocal
 def main(argv):
-    try:
-        #os.remove(defaultFilename)
-        pass
-    except FileNotFoundError:
-        pass
     Base.metadata.create_all(engine())
 
 

@@ -149,6 +149,7 @@ class ValueValidator[T](ABC):
 
 
 class KeyValidator(ABC):
+    # noinspection PyUnusedLocal
     @abstractmethod
     def validate_key(self, proposed_text, action, inserted_char):
         return True
@@ -277,14 +278,15 @@ class FilterEditTable(ttk.Frame):
         for column_description in self.column_descriptions:
             column_label = column_description.label
             self.tree.heading(column_label, text=column_label, command=lambda c=column_label: self.sort_col(c, False))
-            self.tree.column(column_label, width=column_description.width, minwidth=column_description.minimum_width, stretch=True, anchor=column_description.anchor)
+            self.tree.column(column_label, width=column_description.width, minwidth=column_description.minimum_width,
+                             stretch=True, anchor=column_description.anchor)
 
         # 5. Right-Click Context Menu
         self.menu = tk.Menu(self, tearoff=0)
         self.menu.add_command(label="Copy Cell Value", command=self.copy_cell)
         self.menu.add_command(label="Copy Full Row Data", command=self.copy_row)
         # self.menu.add_separator()
-        # self.menu.add_command(label="Delete Selected Row(s)", command=self.delete_rows)
+        # self.menu.add_command(label="Delete Selected Row(s)", command=self.delete_rows
 
         # 6. Bind Interactivity
         self.bind("<Configure>", self.sync_widths)
@@ -318,6 +320,7 @@ class FilterEditTable(ttk.Frame):
         # 2. Re-render table using original data-entry order
         self.populate_tree()
 
+    # noinspection PyUnusedLocal
     def sync_widths(self, event=None):
         for idx, column_description in enumerate(self.column_descriptions):
             col = column_description.label
@@ -356,6 +359,7 @@ class FilterEditTable(ttk.Frame):
         self.tree.tag_configure("even", background="#f2f2f2")
         self.tree.tag_configure("odd", background="#ffffff")
 
+    # noinspection PyUnusedLocal
     def filter_data(self, *args):
         filter_matchers = []
         for column_description in self.column_descriptions:
@@ -592,7 +596,7 @@ class CGS(GetterSetter):
 
     @override
     def do_get(self, o) -> str:
-        assert hasattr(o, self.name)
+        assert hasattr(o, self.name), f"Object {o} has no attribute {self.name}"
         return getattr(o, self.name)
 
     @override
