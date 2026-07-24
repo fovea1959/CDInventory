@@ -1,8 +1,11 @@
 #!/usr/bin/python3
 
 import csv
+import json
 import queue
 import sys
+
+from dataclasses import dataclass, asdict
 
 from logging.handlers import RotatingFileHandler
 
@@ -21,21 +24,29 @@ from GFilterEditTable import *
 from q_gui_generic_app import QGuiGenericApp
 
 
+PREFS_FILE_NAME = "q_gui_prefs.json"
+
+
+@dataclass
+class Preferences:
+    gui_geometry: str | None = None
+    gui_panedwindow1_sash: int | None = None
+
+
 class G:
     def __init__(self):
         self.gui: QGuiApp | None = None
         self.mb = utils.MB()
-        self.die = False
+        self.preferences = Preferences()
 
 
 class QGuiApp(QGuiGenericApp):
     def __init__(self, master=None, g: G = None, log_queue: queue.Queue = None, logging_formatter=None):
         super().__init__(master)
+        self.master = master
         self.g = g
         g.gui = self
         self.logger = logging.getLogger(self.__class__.__name__)
-
-        self.running = False
 
         self.log_text = self.builder.get_object('log_text', master)
         current_font = tkfont.Font(font=self.log_text.cget("font"))
@@ -49,7 +60,26 @@ class QGuiApp(QGuiGenericApp):
 
         self.setup_cds_frame()
 
+        self.mainwindow = self.builder.get_object("tk1", master)
+        self.panedwindow1 = self.builder.get_object("panedwindow1", master)
+        self.setup_window()
+        self.mainwindow.protocol("WM_DELETE_WINDOW", self.on_close)
+
         self.logger.info("__init__ successful")
+
+    def setup_window(self):
+        gui_geometry = self.g.preferences.gui_geometry
+        if gui_geometry is not None:
+            self.mainwindow.geometry(gui_geometry)
+        # Restore paned window sash position with a slight delay
+        gui_panedwindow1_sash = self.g.preferences.gui_panedwindow1_sash
+        if gui_panedwindow1_sash is not None:
+            self.mainwindow.after(50, lambda: self.panedwindow1.sashpos(0, gui_panedwindow1_sash))
+
+    def on_close(self):
+        self.g.preferences.gui_geometry = self.mainwindow.geometry()
+        self.g.preferences.gui_panedwindow1_sash = self.panedwindow1.sashpos(0)
+        self.mainwindow.destroy()
 
     @override
     def menuitem_test(self, itemid):
@@ -87,29 +117,8 @@ class QGuiApp(QGuiGenericApp):
 
         table_widget.pack(fill="both", expand=True)
 
-    def center_window(self):
-        # Force an update of idle tasks to get accurate dimensions before mapping
-        self.mainwindow.update_idletasks()
-
-        # Get screen dimensions
-        screen_width = self.mainwindow.winfo_screenwidth()
-        screen_height = self.mainwindow.winfo_screenheight()
-
-        # Get window dimensions
-        win_width = self.mainwindow.winfo_width()
-        win_height = self.mainwindow.winfo_height()
-
-        # Calculate X and Y coordinates
-        x = (screen_width // 2) - (win_width // 2)
-        y = (screen_height // 2) - (win_height // 2)
-
-        # Set the geometry
-        self.mainwindow.geometry(f'{win_width}x{win_height}+{x}+{y}')
-
     def run(self):
         self.running = True
-        self.logger.info("centering window")
-        self.center_window()
         self.logger.info("starting")
         super().run()
         self.running = False
@@ -204,6 +213,12 @@ def main(argv):
     logger.addHandler(queue_handler)
 
     g = G()
+    try:
+        with open(PREFS_FILE_NAME, "r") as f:
+            data = json.load(f)
+            g.preferences = Preferences(**data)
+    except Exception as exc:
+        logger.warning("unable to load prefs from %s: %s", PREFS_FILE_NAME, exc)
 
     try:
         app = QGuiApp(g=g, log_queue=log_queue)
@@ -215,6 +230,9 @@ def main(argv):
     finally:
         logger.important("telling everyone to die")
         g.die = True
+
+    with open(PREFS_FILE_NAME, "w") as f:
+        json.dump(asdict(g.preferences), f)
 
     logger.info('all done!')
 

@@ -24,6 +24,7 @@
     <resources />
   </project>
   <object class="tk.Tk" id="tk1">
+    <property name="background">#d9f420</property>
     <property name="height">600</property>
     <property name="title" translatable="yes">CD Inventory</property>
     <property name="width">800</property>
@@ -66,6 +67,8 @@
         <property name="orient">vertical</property>
         <property name="width">800</property>
         <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
           <property name="side">top</property>
         </layout>
         <child>
