@@ -134,7 +134,7 @@ class TypeConverter[T](ABC):
 
 class GetterSetter[T](ABC):
     @abstractmethod
-    def do_get(self, o: T) -> T:
+    def do_get(self, o: T) -> str:
         pass
 
     @abstractmethod
@@ -195,6 +195,7 @@ class ColumnDescription:
 class FilterEditTable(ttk.Frame):
     def __init__(self, parent, column_descriptions, data_interface: Optional[DataInterface] = None):
         super().__init__(parent)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.column_descriptions: Optional[List[ColumnDescription]] = column_descriptions
         self.data_interface = data_interface
 
@@ -206,7 +207,7 @@ class FilterEditTable(ttk.Frame):
 
         self.filter_row = None
         self.tree = None
-        self.menu = None
+        self.menu : tk.Menu | None = None
 
         self.build_widget_layout()
 
@@ -296,6 +297,18 @@ class FilterEditTable(ttk.Frame):
 
         self.populate_tree()
         self.after(100, self.sync_widths)
+
+    def get_widths(self):
+        # Iterate over all defined columns including the tree/index column '#0'
+        widths = {col: self.tree.column(col, "width") for col in ["#0"] + list(self.tree["columns"])}
+        return widths
+
+    def set_widths(self, widths):
+        self.logger.important("setting widths: %s", widths)
+        if widths is None: return
+        for col, width in widths.items():
+            self.tree.column(col, width=width)
+
 
     def focus_in(self, col, p):
         if self.filter_entries[col].get() == p:

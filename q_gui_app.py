@@ -3,6 +3,7 @@
 import json
 import queue
 import sys
+import threading
 
 # noinspection PyUnresolvedReferences
 from dataclasses import asdict, dataclass
@@ -15,7 +16,9 @@ import sqlalchemy
 from pythonjsonlogger.json import JsonFormatter
 
 import CDInventoryDao
+import GFilterEditTable
 import utils
+from CDInventoryEntities import CD
 
 from GFilterEditTable import *
 
@@ -28,6 +31,9 @@ PREFS_FILE_NAME = "q_gui_prefs.json"
 class Preferences:
     gui_geometry: str | None = None
     gui_panedwindow1_sash: int | None = None
+    gui_cd_column_widths: List[int] | None = None
+    gui_mp3_column_widths: List[int] | None = None
+    gui_unripped_cd_column_widths: List[int] | None = None
 
 
 class G:
@@ -62,6 +68,28 @@ class EntityDataInterface(DataInterface):
         raise Exception("shouldn't get called")
 
 
+class ReadOnlyDataInterface(DataInterface):
+    def __init__(self, g=None):
+        self.g = g
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    @override
+    def save_data(self, data):
+        raise Exception("readonly!")
+
+    @override
+    def delete_data(self, data):
+        raise Exception("readonly!")
+
+
+class LocationDescriptionGS(GetterSetter):
+    def do_get(self, o: CD) -> str:
+        return o.cd_location.location_description
+
+    def do_set(self, o: CD, v: str) -> CD:
+        raise Exception("no do_set!")
+
+
 class QGuiApp(QGuiGenericApp):
     def __init__(self, master=None, g: G = None, log_queue: queue.Queue = None, logging_formatter=None):
         super().__init__(master)
@@ -80,10 +108,13 @@ class QGuiApp(QGuiGenericApp):
             else logging.Formatter('%(levelname)s %(name)s %(message)s')
         self.mainwindow.after(100, self.poll_log_queue)
 
-        self.setup_cds_frame()
-
         self.mainwindow = self.builder.get_object("tk1", master)
         self.panedwindow1 = self.builder.get_object("panedwindow1", master)
+
+        self.cds_frame = self.setup_cds_frame()
+        self.mp3s_frame = self.setup_mp3s_frame()
+        self.unripped_cds_frame = self.setup_unripped_cds_frame()
+
         self.setup_window()
         self.mainwindow.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -98,14 +129,55 @@ class QGuiApp(QGuiGenericApp):
         if gui_panedwindow1_sash is not None:
             self.mainwindow.after(50, lambda: self.panedwindow1.sashpos(0, gui_panedwindow1_sash))
 
+        self.logger.info("prefs: %s", self.g.preferences)
+
+        self.cds_frame.set_widths(self.g.preferences.gui_cd_column_widths)
+        self.mp3s_frame.set_widths(self.g.preferences.gui_mp3_column_widths)
+        self.unripped_cds_frame.set_widths(self.g.preferences.gui_unripped_cd_column_widths)
+
     def on_close(self):
         self.g.preferences.gui_geometry = self.mainwindow.geometry()
         self.g.preferences.gui_panedwindow1_sash = self.panedwindow1.sashpos(0)
+        self.g.preferences.gui_cd_column_widths = self.cds_frame.get_widths()
+        self.g.preferences.gui_mp3_column_widths = self.mp3s_frame.get_widths()
+        self.g.preferences.gui_unripped_cd_column_widths = self.unripped_cds_frame.get_widths()
         self.mainwindow.destroy()
 
     @override
     def menuitem_test(self, itemid):
         self.logger.important("menuitem_test hit: %s", itemid)
+
+        # self.btn.config(state="disabled")
+        # self.status.config(text="Loading data from database...")
+        # self.result_label.config(text="")
+
+        # 2. Run slow query in a background thread
+        threading.Thread(target=self.fetch_query, daemon=True).start()
+
+    def fetch_query(self):
+        try:
+            # Simulate or execute slow SQLAlchemy query here
+            # result = session.query(MyModel).all()
+            import time
+            time.sleep(3)  # Simulating a 3-second slow query
+            data = "Query finished successfully!"
+        except Exception as e:
+            data = f"Error: {e}"
+
+        self.logger.important("query done")
+        # 3. Safely send results back to main thread using root.after
+        self.mainwindow.after(0, self.update_ui, data)
+
+    def update_ui(self, data):
+        self.logger.important("slow query complete: %s", data)
+        self.toast(data, 10)
+
+    def command_send_release_id_to_picard(self, fte: GFilterEditTable.FilterEditTable):
+        if hasattr(fte, 't_item') and hasattr(fte, 't_col'):
+            c_idx = int(fte.t_col.replace('#', '')) - 1
+            vals = fte.tree.item(fte.t_item, "values")
+            data_row = fte.extra_data.get(fte.t_item)
+            self.logger.info('%s %s', vals, data_row)
 
     def setup_cds_frame(self):
         d = []
@@ -130,10 +202,75 @@ class QGuiApp(QGuiGenericApp):
         table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
         table_widget.data_interface = EntityDataInterface(g=self.g)
 
+        table_widget.menu.add_separator()
+        table_widget.menu.add_command(label="Send release id to Picard", command=lambda: self.command_send_release_id_to_picard(table_widget))
+
         table_widget.data_store = d
         table_widget.populate_tree()
 
         table_widget.pack(fill="both", expand=True)
+
+        return table_widget
+
+    def setup_mp3s_frame(self):
+        d = []
+
+        for mp3 in self.g.dao.get_all_mp3s():
+            d.append(mp3)
+
+        column_descriptions = [
+            ColumnDescription(label="Path", read_only=True, getter_setter=CGS("path")),
+            ColumnDescription(label="Title", read_only=True, getter_setter=CGS("title")),
+            ColumnDescription(label="Artists", read_only=True, getter_setter=CGS("track_artists")),
+            ColumnDescription(label="Release Id", read_only=True, getter_setter=CGS("release_id")),
+            ColumnDescription(label="Recording Id", read_only=True, getter_setter=CGS("recording_id")),
+        ]
+
+        # Component Initialization
+        tab_container = self.builder.get_object("mp3_frame")
+        table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
+        table_widget.data_interface = ReadOnlyDataInterface(g=self.g)
+
+        table_widget.menu.add_separator()
+        table_widget.menu.add_command(label="Boo!")
+
+        table_widget.data_store = d
+        table_widget.populate_tree()
+
+        table_widget.pack(fill="both", expand=True)
+
+        return table_widget
+
+    def setup_unripped_cds_frame(self):
+        d = []
+
+        for cd in self.g.dao.get_all_unripped_cds():
+            d.append(cd)
+
+        dropdown_converter = CodeAndTextContainer()
+        for location in self.g.dao.get_all_locations():
+            dropdown_converter.add(location.location_id, location.location_description)
+
+        column_descriptions = [
+            ColumnDescription(label="Title", read_only=True, getter_setter=CGS("cd_title")),
+            ColumnDescription(label="Artist", read_only=True, getter_setter=CGS("cd_artists")),
+            ColumnDescription(label="Release Id", read_only=True, getter_setter=CGS("cd_musicbrainz_release_id")),
+            ColumnDescription(label="Location", read_only=True, getter_setter=CGS("cd_location_id"),
+                              dropdown_provider=dropdown_converter, type_converter=dropdown_converter
+                              ),
+        ]
+
+        # Component Initialization
+        tab_container = self.builder.get_object("unripped_cd_frame")
+        table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
+        table_widget.data_interface = ReadOnlyDataInterface(g=self.g)
+
+        table_widget.data_store = d
+        table_widget.populate_tree()
+
+        table_widget.pack(fill="both", expand=True)
+
+        return table_widget
 
     def toast(self, message, duration):
         # Create a borderless popup window
@@ -178,35 +315,12 @@ class QGuiApp(QGuiGenericApp):
         self.mainwindow.after(100, self.poll_log_queue)
 
 
-VERBOSE_LEVEL_NUM = 15
-IMPORTANT_LEVEL_NUM = 25
-
-
-def verbose(self, message, *args, **kws):
-    if self.isEnabledFor(VERBOSE_LEVEL_NUM):
-        # Yes, logger._log is a semi-private API, but this is the standard way
-        self._log(VERBOSE_LEVEL_NUM, message, args, **kws)
-
-
-def important(self, message, *args, **kws):
-    if self.isEnabledFor(IMPORTANT_LEVEL_NUM):
-        # Yes, logger._log is a semi-private API, but this is the standard way
-        self._log(IMPORTANT_LEVEL_NUM, message, args, **kws)
-
-
-def setup_custom_log_level():
-    logging.addLevelName(VERBOSE_LEVEL_NUM, "VERBOSE")
-    logging.Logger.verbose = verbose
-    logging.addLevelName(IMPORTANT_LEVEL_NUM, "IMPORTANT")
-    logging.Logger.important = important
-
-
 # noinspection PyUnusedLocal
 def main(argv):
-    setup_custom_log_level()
+    utils.setup_custom_log_levels()
 
     logger = logging.getLogger('')
-    logger.setLevel(VERBOSE_LEVEL_NUM)
+    logger.setLevel(utils.VERBOSE_LEVEL_NUM)
 
     file_handler = RotatingFileHandler(
         "q_gui.log",
@@ -216,12 +330,12 @@ def main(argv):
     file_handler.setFormatter(JsonFormatter(
         fmt="{levelname} {message} {name} {asctime} {threadName} {levelno}", style="{"
     ))
-    file_handler.setLevel(VERBOSE_LEVEL_NUM)
+    file_handler.setLevel(utils.VERBOSE_LEVEL_NUM)
     logger.addHandler(file_handler)
 
     log_queue = queue.Queue()
     queue_handler = utils.QueueHandler(log_queue=log_queue)
-    queue_handler.setLevel(IMPORTANT_LEVEL_NUM)
+    queue_handler.setLevel(utils.IMPORTANT_LEVEL_NUM)
     logger.addHandler(queue_handler)
 
     g = G()
@@ -245,7 +359,7 @@ def main(argv):
             logger.error("received %s", exc, exc_info=exc)
 
     with open(PREFS_FILE_NAME, "w") as f:
-        json.dump(asdict(g.preferences), f)
+        json.dump(asdict(g.preferences), f, indent=1, sort_keys=True)
 
     logger.info('all done!')
 

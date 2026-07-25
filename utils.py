@@ -306,3 +306,26 @@ def fill_in_release_from_mb_json(release: MusicbrainzRelease, musicbrainz_releas
 
 def compact_json(o) -> str:
     return json.dumps(o, sort_keys=True, separators=(',', ':'))
+
+
+VERBOSE_LEVEL_NUM = 15
+IMPORTANT_LEVEL_NUM = 25
+
+
+def verbose(self, message, *args, **kws):
+    if self.isEnabledFor(VERBOSE_LEVEL_NUM):
+        # Yes, logger._log is a semi-private API, but this is the standard way
+        self._log(VERBOSE_LEVEL_NUM, message, args, **kws)
+
+
+def important(self, message, *args, **kws):
+    if self.isEnabledFor(IMPORTANT_LEVEL_NUM):
+        # Yes, logger._log is a semi-private API, but this is the standard way
+        self._log(IMPORTANT_LEVEL_NUM, message, args, **kws)
+
+
+def setup_custom_log_levels():
+    logging.addLevelName(VERBOSE_LEVEL_NUM, "VERBOSE")
+    logging.Logger.verbose = verbose
+    logging.addLevelName(IMPORTANT_LEVEL_NUM, "IMPORTANT")
+    logging.Logger.important = important

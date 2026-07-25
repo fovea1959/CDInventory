@@ -56,9 +56,23 @@ class DAO:
         rv = self.session.scalars(query).all()
         return rv
 
+    def get_all_unripped_cds(self):
+        query = (
+            sqlalchemy.select(CD)
+            .outerjoin(MP3, CD.cd_musicbrainz_release_id == MP3.release_id)
+            .where(MP3.release_id == None)  # Filters out found records
+        )
+        rv = self.session.scalars(query).all()
+        return rv
+
     def get_cd_by_musicbrainz_id(self, musicbrainz_id: str = '') -> Optional[CD]:
         query = sqlalchemy.select(CD).where(CD.cd_musicbrainz_release_id == musicbrainz_id)
         rv = self.session.execute(query).scalar_one_or_none()
+        return rv
+
+    def get_all_mp3s(self):
+        query = sqlalchemy.select(MP3)
+        rv = self.session.scalars(query).all()
         return rv
 
 
