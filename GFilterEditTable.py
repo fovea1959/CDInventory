@@ -304,11 +304,10 @@ class FilterEditTable(ttk.Frame):
         return widths
 
     def set_widths(self, widths):
-        self.logger.important("setting widths: %s", widths)
-        if widths is None: return
-        for col, width in widths.items():
-            self.tree.column(col, width=width)
-
+        self.logger.debug("setting widths: %s", widths)
+        if widths is not None:
+            for col, width in widths.items():
+                self.tree.column(col, width=width)
 
     def focus_in(self, col, p):
         if self.filter_entries[col].get() == p:
@@ -539,6 +538,11 @@ class FilterEditTable(ttk.Frame):
                 self.menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.menu.grab_release()
+
+    def get_data_for_right_menu_click(self):
+        if self.t_item is None:
+            return None
+        return self.extra_data.get(self.t_item)
 
     def copy_cell(self):
         if hasattr(self, 't_item') and hasattr(self, 't_col'):

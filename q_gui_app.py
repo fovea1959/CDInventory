@@ -4,6 +4,9 @@ import json
 import queue
 import sys
 import threading
+import urllib.error
+import urllib.request
+import webbrowser
 
 # noinspection PyUnresolvedReferences
 from dataclasses import asdict, dataclass
@@ -172,12 +175,42 @@ class QGuiApp(QGuiGenericApp):
         self.logger.important("slow query complete: %s", data)
         self.toast(data, 10)
 
+    def get_cd_for_command(self, fte: GFilterEditTable.FilterEditTable):
+        cd: CD | None = None
+        data_row: dict = fte.get_data_for_right_menu_click()
+        self.logger.info("Right click from %s", data_row)
+        if data_row is not None:
+            cd = data_row.get('raw')
+        return cd
+
+    def request_url(self, url):
+        try:
+            # Send the GET request with a 5-second timeout
+            with urllib.request.urlopen(url, timeout=5) as response:
+                # Read the raw bytes and decode to a string
+                raw_data = response.read().decode('utf-8')
+                self.logger.info("GET %s success: %s", url, raw_data)
+
+        except urllib.error.HTTPError as e:
+            self.logger.error("GET %s HTTP error: %s - %s", url, e.code, e.reason)
+        except urllib.error.URLError as e:
+            self.logger.error("GET %s Connection error: %s", url, e.reason)
+
     def command_send_release_id_to_picard(self, fte: GFilterEditTable.FilterEditTable):
-        if hasattr(fte, 't_item') and hasattr(fte, 't_col'):
-            c_idx = int(fte.t_col.replace('#', '')) - 1
-            vals = fte.tree.item(fte.t_item, "values")
-            data_row = fte.extra_data.get(fte.t_item)
-            self.logger.info('%s %s', vals, data_row)
+        cd = self.get_cd_for_command(fte)
+        if cd is not None:
+            release_id = cd.cd_musicbrainz_release_id
+            self.logger.info("Sending %s to picard", release_id)
+            url = f"http://127.0.0.1:8000/openalbum?id={release_id}"
+            self.request_url(url)
+
+    def command_open_musicbrainz_for_this_release(self, fte: GFilterEditTable.FilterEditTable):
+        cd = self.get_cd_for_command(fte)
+        if cd is not None:
+            release_id = cd.cd_musicbrainz_release_id
+            self.logger.info("Opening release %s in browser", release_id)
+            url = f"https://musicbrainz.org/release/{release_id}"
+            webbrowser.open(url)
 
     def setup_cds_frame(self):
         d = []
@@ -203,6 +236,7 @@ class QGuiApp(QGuiGenericApp):
         table_widget.data_interface = EntityDataInterface(g=self.g)
 
         table_widget.menu.add_separator()
+        table_widget.menu.add_command(label="Open Musicbrainz for this release", command=lambda: self.command_open_musicbrainz_for_this_release(table_widget))
         table_widget.menu.add_command(label="Send release id to Picard", command=lambda: self.command_send_release_id_to_picard(table_widget))
 
         table_widget.data_store = d
