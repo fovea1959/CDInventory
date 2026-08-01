@@ -11,8 +11,8 @@ import musicbrainzngs
 import soundfile as sf
 import sounddevice as sd
 
-from CDInventoryEntities import CD, Location, MusicbrainzRelease
-from CDInventoryDao import DAO
+from cd_inventory_entities import CD, Location, MusicbrainzRelease
+from cd_inventory_dao import DAO
 
 
 class ContentFilter(logging.Filter):

@@ -4,7 +4,7 @@ import sys
 import sqlalchemy
 import sqlalchemy.orm
 
-from CDInventoryEntities import *
+from cd_inventory_entities import *
 
 logger = logging.getLogger("dao")
 

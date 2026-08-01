@@ -21,12 +21,11 @@ import pygubu
 import sqlalchemy
 from pythonjsonlogger.json import JsonFormatter
 
-import CDInventoryDao
-import GFilterEditTable
+import cd_inventory_dao
 import utils
-from CDInventoryEntities import CD
+from cd_inventory_entities import CD
 
-from GFilterEditTable import *
+from generic_filter_edit_table import *
 from q_gui_dialog import *
 
 PREFS_FILE_NAME = "q_gui_prefs.json"
@@ -199,7 +198,7 @@ class QGuiApp:
         self.logger.important("slow query complete: %s", data)
         self.toast(data, 10)
 
-    def get_cd_for_command(self, fte: GFilterEditTable.FilterEditTable):
+    def get_cd_for_command(self, fte: FilterEditTable):
         cd: CD | None = None
         data_row: dict = fte.get_data_for_right_menu_click()
         self.logger.info("Right click from %s", data_row)
@@ -220,7 +219,7 @@ class QGuiApp:
         except urllib.error.URLError as e:
             self.logger.error("GET %s Connection error: %s", url, e.reason)
 
-    def command_send_release_id_to_picard(self, fte: GFilterEditTable.FilterEditTable):
+    def command_send_release_id_to_picard(self, fte: FilterEditTable):
         cd = self.get_cd_for_command(fte)
         if cd is not None:
             release_id = cd.cd_musicbrainz_release_id
@@ -228,7 +227,7 @@ class QGuiApp:
             url = f"http://127.0.0.1:8000/openalbum?id={release_id}"
             self.request_url(url)
 
-    def command_open_musicbrainz_for_this_release(self, fte: GFilterEditTable.FilterEditTable):
+    def command_open_musicbrainz_for_this_release(self, fte: FilterEditTable):
         cd = self.get_cd_for_command(fte)
         if cd is not None:
             release_id = cd.cd_musicbrainz_release_id
@@ -423,7 +422,7 @@ def main(argv):
 
     logging.info("prefs: %s", g.preferences)
 
-    g.dao = CDInventoryDao.DAO()
+    g.dao = cd_inventory_dao.DAO()
 
     with g.dao:
         try:
