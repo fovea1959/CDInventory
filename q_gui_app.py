@@ -372,28 +372,17 @@ class QGuiApp:
         self.mainwindow.after(100, self.poll_log_queue)
 
 
-class PreferencesDialog:
-    def __init__(self, master=None, g: G = None, builder: pygubu.Builder = None):
+class QGUIDialog:
+    def __init__(self, master=None, dialogbox_name=None, project_path=PROJECT_PATH, project_ui=PROJECT_UI):
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.g = g
-
-        if builder is None:
-            self.builder = builder = pygubu.Builder()
-            builder.add_resource_path(PROJECT_PATH)
-            builder.add_from_file(PROJECT_UI)
-        else:
-            # self.builder = builder
-            raise Exception("no, it doesn't work well to reuse a builder")
-        self.mainwindow = builder.get_object("preferences_dialog", master)
+        # don't even try to reuse a builder. it does seem to work.
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(PROJECT_PATH)
+        builder.add_from_file(PROJECT_UI)
+        self.mainwindow = builder.get_object(dialogbox_name, master)
 
         builder.connect_callbacks(self)
-
-        self.prefs_mp3_path_widget = self.builder.get_object("mp3_path_widget")
-        current_path = self.g.preferences.mp3_path
-        if current_path is not None:
-            self.prefs_mp3_path_widget.configure(initialdir=current_path)
-            self.prefs_mp3_path_widget.configure(path=current_path)
 
     def run(self):
         self.mainwindow.run()
@@ -407,9 +396,27 @@ class PreferencesDialog:
 
     def on_save(self):
         """Callback linked directly to the XML button via Pygubu."""
-        self.g.preferences.mp3_path = self.prefs_mp3_path_widget.cget('path')
-        self.logger.important("Saving settings here: %s", self.g.preferences.mp3_path)
+        self.do_save()
         self.mainwindow.destroy()
+
+    def do_save(self):
+        pass
+
+
+class PreferencesDialog(QGUIDialog):
+    def __init__(self, master=None, g: G = None):
+        super().__init__(master=master, dialogbox_name="preferences_dialog")
+        self.g = g
+        self.prefs_mp3_path_widget = self.builder.get_object("mp3_path_widget")
+        current_path = self.g.preferences.mp3_path
+        if current_path is not None:
+            self.prefs_mp3_path_widget.configure(initialdir=current_path)
+            self.prefs_mp3_path_widget.configure(path=current_path)
+
+    @override
+    def do_save(self):
+        self.g.preferences.mp3_path = self.prefs_mp3_path_widget.cget('path')
+        self.logger.important("Saving settings: %s", self.g.preferences.mp3_path)
 
 
 # noinspection PyUnusedLocal

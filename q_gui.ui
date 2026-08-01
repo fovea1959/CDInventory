@@ -12,7 +12,7 @@
       <setting id="output_dir">.</setting>
       <setting id="builder_namespace">custom_widgets</setting>
       <setting id="output_dir2" />
-      <setting id="generate_code_onsave">True</setting>
+      <setting id="generate_code_onsave">False</setting>
       <setting id="use_i18n">False</setting>
       <setting id="all_ids_attributes">False</setting>
       <setting id="import_tkvariables">False</setting>
