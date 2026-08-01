@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import json
+import pathlib
 import queue
 import sys
 import threading
@@ -15,6 +16,8 @@ from logging.handlers import RotatingFileHandler
 
 from tkinter import font as tkfont
 
+import pygubu
+
 import sqlalchemy
 from pythonjsonlogger.json import JsonFormatter
 
@@ -25,13 +28,20 @@ from CDInventoryEntities import CD
 
 from GFilterEditTable import *
 
-from q_gui_generic_app import QGuiGenericApp
+# from q_gui_generic_app import QGuiGenericApp
+from q_gui_generic_appui import QGuiGenericAppUI
+
 
 PREFS_FILE_NAME = "q_gui_prefs.json"
+
+PROJECT_PATH = pathlib.Path(__file__).parent
+PROJECT_UI = PROJECT_PATH / "q_gui.ui"
+RESOURCE_PATHS = [PROJECT_PATH]
 
 
 @dataclass
 class Preferences:
+    mp3_path: str | None = None
     gui_geometry: str | None = None
     gui_panedwindow1_sash: int | None = None
     gui_cd_column_widths: List[int] | None = None
@@ -93,9 +103,14 @@ class LocationDescriptionGS(GetterSetter):
         raise Exception("no do_set!")
 
 
-class QGuiApp(QGuiGenericApp):
+class QGuiApp:
     def __init__(self, master=None, g: G = None, log_queue: queue.Queue = None, logging_formatter=None):
-        super().__init__(master)
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(PROJECT_PATH)
+        builder.add_from_file(PROJECT_UI)
+        self.mainwindow = builder.get_object("mainwindow", master)
+        builder.connect_callbacks(self)
+
         self.master = master
         self.g = g
         g.gui = self
@@ -111,17 +126,31 @@ class QGuiApp(QGuiGenericApp):
             else logging.Formatter('%(levelname)s %(name)s %(message)s')
         self.mainwindow.after(100, self.poll_log_queue)
 
-        self.mainwindow = self.builder.get_object("tk1", master)
-        self.panedwindow1 = self.builder.get_object("panedwindow1", master)
-
         self.cds_frame = self.setup_cds_frame()
         self.mp3s_frame = self.setup_mp3s_frame()
         self.unripped_cds_frame = self.setup_unripped_cds_frame()
+
+        self.panedwindow1 = self.builder.get_object("panedwindow1", master)
 
         self.setup_window()
         self.mainwindow.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.logger.info("__init__ successful")
+
+    def run(self):
+        self.mainwindow.mainloop()
+
+    def on_cmd_quit(self):
+        self.mainwindow.on_close()
+
+    def on_cmd_preferences(self):
+        # Create dialog window.
+        # dialog = BadPreferencesDialog(self.mainwindow, g=G())
+        dialog = PreferencesDialog(self.mainwindow, g=self.g)
+        dialog.run()
+        # Dialog was configured to run in modal state.
+        # So wait until the window is closed.
+        self.mainwindow.wait_window(dialog.mainwindow.toplevel)
 
     def setup_window(self):
         gui_geometry = self.g.preferences.gui_geometry
@@ -132,13 +161,12 @@ class QGuiApp(QGuiGenericApp):
         if gui_panedwindow1_sash is not None:
             self.mainwindow.after(50, lambda: self.panedwindow1.sashpos(0, gui_panedwindow1_sash))
 
-        self.logger.info("prefs: %s", self.g.preferences)
-
         self.cds_frame.set_widths(self.g.preferences.gui_cd_column_widths)
         self.mp3s_frame.set_widths(self.g.preferences.gui_mp3_column_widths)
         self.unripped_cds_frame.set_widths(self.g.preferences.gui_unripped_cd_column_widths)
 
     def on_close(self):
+        self.logger.important("saving preferences")
         self.g.preferences.gui_geometry = self.mainwindow.geometry()
         self.g.preferences.gui_panedwindow1_sash = self.panedwindow1.sashpos(0)
         self.g.preferences.gui_cd_column_widths = self.cds_frame.get_widths()
@@ -146,8 +174,7 @@ class QGuiApp(QGuiGenericApp):
         self.g.preferences.gui_unripped_cd_column_widths = self.unripped_cds_frame.get_widths()
         self.mainwindow.destroy()
 
-    @override
-    def menuitem_test(self, itemid):
+    def on_cmd_about(self, itemid):
         self.logger.important("menuitem_test hit: %s", itemid)
 
         # self.btn.config(state="disabled")
@@ -200,7 +227,7 @@ class QGuiApp(QGuiGenericApp):
         cd = self.get_cd_for_command(fte)
         if cd is not None:
             release_id = cd.cd_musicbrainz_release_id
-            self.logger.info("Sending %s to picard", release_id)
+            self.logger.info("Sending release %s to picard", release_id)
             url = f"http://127.0.0.1:8000/openalbum?id={release_id}"
             self.request_url(url)
 
@@ -349,6 +376,42 @@ class QGuiApp(QGuiGenericApp):
         self.mainwindow.after(100, self.poll_log_queue)
 
 
+class PreferencesDialog:
+    def __init__(self, master=None, g: G = None):
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        self.g = g
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(PROJECT_PATH)
+        builder.add_from_file(PROJECT_UI)
+        self.mainwindow = builder.get_object("preferences_dialog", master)
+
+        builder.connect_callbacks(self)
+
+        self.prefs_mp3_path_widget = self.builder.get_object("mp3_path_widget")
+        current_path = self.g.preferences.mp3_path
+        if current_path is not None:
+            self.prefs_mp3_path_widget.configure(initialdir=current_path)
+            self.prefs_mp3_path_widget.configure(path=current_path)
+
+    def run(self):
+        self.mainwindow.run()
+
+    def on_cancel(self):
+        self.logger.info("cancelled")
+        self.mainwindow.destroy()
+
+    def on_close(self, event):
+        self.on_cancel()
+
+    def on_save(self):
+        """Callback linked directly to the XML button via Pygubu."""
+        self.g.preferences.mp3_path = self.prefs_mp3_path_widget.cget('path')
+        self.logger.important("Saving settings here: %s", self.g.preferences.mp3_path)
+        self.mainwindow.destroy()
+
+
 # noinspection PyUnusedLocal
 def main(argv):
     utils.setup_custom_log_levels()
@@ -380,6 +443,8 @@ def main(argv):
             g.preferences = Preferences(**data)
     except Exception as exc:
         logger.warning("unable to load prefs from %s: %s", PREFS_FILE_NAME, exc)
+
+    logging.info("prefs: %s", g.preferences)
 
     g.dao = CDInventoryDao.DAO()
 

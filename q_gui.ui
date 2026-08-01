@@ -23,11 +23,14 @@
     <customwidgets />
     <resources />
   </project>
-  <object class="tk.Tk" id="tk1">
+  <object class="tk.Tk" id="mainwindow" named="True">
     <property name="background">#d9f420</property>
     <property name="height">600</property>
     <property name="title" translatable="yes">CD Inventory</property>
     <property name="width">800</property>
+    <containerlayout manager="grid">
+      <property type="col" id="0" name="weight">1</property>
+    </containerlayout>
     <child>
       <object class="pygubu.builder.widgets.toplevelmenu" id="toplevelmenu3">
         <child>
@@ -38,8 +41,17 @@
                 <property name="label" translatable="yes">File</property>
                 <property name="tearoff">false</property>
                 <child>
+                  <object class="tk.Menuitem.Command" id="command3">
+                    <property name="command" type="command" cbtype="simple">on_cmd_preferences</property>
+                    <property name="label" translatable="yes">Preferences...</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="tk.Menuitem.Separator" id="separator1" />
+                </child>
+                <child>
                   <object class="tk.Menuitem.Command" id="command1">
-                    <property name="command" type="command" cbtype="with_wid">menuitem_test</property>
+                    <property name="command" type="command" cbtype="simple">on_cmd_quit</property>
                     <property name="label" translatable="yes">Quit</property>
                   </object>
                 </child>
@@ -51,7 +63,7 @@
                 <property name="tearoff">false</property>
                 <child>
                   <object class="tk.Menuitem.Command" id="command2">
-                    <property name="command" type="command" cbtype="with_wid">menuitem_test</property>
+                    <property name="command" type="command" cbtype="with_wid">on_cmd_about</property>
                     <property name="label" translatable="yes">About</property>
                   </object>
                 </child>
@@ -62,67 +74,93 @@
       </object>
     </child>
     <child>
-      <object class="ttk.Panedwindow" id="panedwindow1">
-        <property name="height">600</property>
-        <property name="orient">vertical</property>
-        <property name="width">800</property>
-        <layout manager="pack">
-          <property name="expand">true</property>
-          <property name="fill">both</property>
-          <property name="side">top</property>
+      <object class="ttk.Frame" id="mainframe" named="True">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">1</property>
+          <property name="sticky">ew</property>
         </layout>
+        <containerlayout manager="grid">
+          <property type="col" id="0" name="weight">1</property>
+          <property type="col" id="all" name="weight">1</property>
+        </containerlayout>
         <child>
-          <object class="ttk.Panedwindow.Pane" id="pane1">
-            <property name="weight">1</property>
+          <object class="ttk.Panedwindow" id="panedwindow1">
+            <property name="height">600</property>
+            <property name="orient">vertical</property>
+            <property name="width">800</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">0</property>
+              <property name="sticky">ew</property>
+            </layout>
             <child>
-              <object class="ttk.Notebook" id="notebook1">
-                <property name="height">200</property>
-                <property name="width">200</property>
-                <layout manager="pack">
-                  <property name="expand">true</property>
-                  <property name="fill">both</property>
-                  <property name="side">top</property>
-                </layout>
+              <object class="ttk.Panedwindow.Pane" id="pane1">
+                <property name="weight">1</property>
                 <child>
-                  <object class="ttk.Notebook.Tab" id="tab3">
-                    <property name="text" translatable="yes">CDs</property>
+                  <object class="ttk.Notebook" id="notebook1">
+                    <property name="height">200</property>
+                    <property name="width">200</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="side">top</property>
+                    </layout>
                     <child>
-                      <object class="ttk.Frame" id="cd_frame" named="True">
-                        <property name="height">200</property>
-                        <property name="width">200</property>
-                        <layout manager="pack">
-                          <property name="side">top</property>
-                        </layout>
+                      <object class="ttk.Notebook.Tab" id="tab3">
+                        <property name="text" translatable="yes">CDs</property>
+                        <child>
+                          <object class="ttk.Frame" id="cd_frame" named="True">
+                            <property name="height">200</property>
+                            <property name="width">200</property>
+                            <layout manager="pack">
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Notebook.Tab" id="tab2">
+                        <property name="text" translatable="yes">MP3s</property>
+                        <child>
+                          <object class="ttk.Frame" id="mp3_frame" named="True">
+                            <property name="height">200</property>
+                            <property name="width">200</property>
+                            <layout manager="pack">
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Notebook.Tab" id="tab1">
+                        <property name="text" translatable="yes">Unripped CDs</property>
+                        <child>
+                          <object class="ttk.Frame" id="unripped_cd_frame" named="True">
+                            <property name="height">200</property>
+                            <property name="width">200</property>
+                            <layout manager="pack">
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Panedwindow.Pane" id="pane2">
+                <property name="weight">1</property>
                 <child>
-                  <object class="ttk.Notebook.Tab" id="tab2">
-                    <property name="text" translatable="yes">MP3s</property>
-                    <child>
-                      <object class="ttk.Frame" id="mp3_frame" named="True">
-                        <property name="height">200</property>
-                        <property name="width">200</property>
-                        <layout manager="pack">
-                          <property name="side">top</property>
-                        </layout>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="ttk.Notebook.Tab" id="tab1">
-                    <property name="text" translatable="yes">Unripped CDs</property>
-                    <child>
-                      <object class="ttk.Frame" id="unripped_cd_frame" named="True">
-                        <property name="height">200</property>
-                        <property name="width">200</property>
-                        <layout manager="pack">
-                          <property name="side">top</property>
-                        </layout>
-                      </object>
-                    </child>
+                  <object class="tk.ScrolledText" id="log_text" named="True">
+                    <property name="state">disabled</property>
+                    <layout manager="pack" />
                   </object>
                 </child>
               </object>
@@ -130,12 +168,113 @@
           </object>
         </child>
         <child>
-          <object class="ttk.Panedwindow.Pane" id="pane2">
-            <property name="weight">1</property>
+          <object class="ttk.Frame" id="frame4">
+            <property name="borderwidth">3</property>
+            <property name="height">200</property>
+            <property name="relief">ridge</property>
+            <property name="width">200</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">1</property>
+              <property name="sticky">ew</property>
+            </layout>
             <child>
-              <object class="tk.ScrolledText" id="log_text" named="True">
-                <property name="state">disabled</property>
-                <layout manager="pack" />
+              <object class="ttk.Label" id="status" named="True">
+                <property name="textvariable">string:status_text</property>
+                <layout manager="pack">
+                  <property name="anchor">w</property>
+                  <property name="expand">false</property>
+                  <property name="fill">x</property>
+                  <property name="padx">5</property>
+                  <property name="pady">3</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="pygubu.builder.widgets.dialog" id="preferences_dialog" named="True">
+    <property name="modal">true</property>
+    <property name="title" translatable="yes">App Options</property>
+    <property name="width">400</property>
+    <bind sequence="&lt;&lt;DialogClose&gt;&gt;" handler="on_close" add="" />
+    <child>
+      <object class="ttk.Frame" id="frame2">
+        <property name="padding">5</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="ttk.Labelframe" id="labelframe1">
+            <property name="padding">5</property>
+            <property name="text" translatable="yes">General</property>
+            <property name="width">430</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="side">top</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property type="col" id="0" name="pad">5</property>
+              <property type="col" id="1" name="minsize">350</property>
+              <property type="col" id="1" name="weight">1</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="label3">
+                <property name="text" translatable="yes">mp3 path:</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="pady">5</property>
+                  <property name="row">0</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="pygubu.widgets.PathChooserInput" id="mp3_path_widget" named="True">
+                <property name="type">directory</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="row">0</property>
+                  <property name="sticky">ew</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="frame3">
+            <property name="height">200</property>
+            <property name="padding">0 10 0 0</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="anchor">e</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Button" id="bsave">
+                <property name="command" type="command" cbtype="simple">on_save</property>
+                <property name="default">active</property>
+                <property name="text" translatable="yes">Save</property>
+                <layout manager="pack">
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="bcancel">
+                <property name="command" type="command" cbtype="simple">on_cancel</property>
+                <property name="default">active</property>
+                <property name="text" translatable="yes">Cancel</property>
+                <layout manager="pack">
+                  <property name="padx">10</property>
+                  <property name="side">left</property>
+                </layout>
               </object>
             </child>
           </object>
