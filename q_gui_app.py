@@ -373,14 +373,18 @@ class QGuiApp:
 
 
 class PreferencesDialog:
-    def __init__(self, master=None, g: G = None):
+    def __init__(self, master=None, g: G = None, builder: pygubu.Builder = None):
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self.g = g
 
-        self.builder = builder = pygubu.Builder()
-        builder.add_resource_path(PROJECT_PATH)
-        builder.add_from_file(PROJECT_UI)
+        if builder is None:
+            self.builder = builder = pygubu.Builder()
+            builder.add_resource_path(PROJECT_PATH)
+            builder.add_from_file(PROJECT_UI)
+        else:
+            # self.builder = builder
+            raise Exception("no, it doesn't work well to reuse a builder")
         self.mainwindow = builder.get_object("preferences_dialog", master)
 
         builder.connect_callbacks(self)

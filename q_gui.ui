@@ -5,7 +5,7 @@
       <setting id="name">CDInventory Query / Utility GUI</setting>
       <setting id="description">The gui for queries and utility operations.</setting>
       <setting id="template">application</setting>
-      <setting id="main_widget">tk1</setting>
+      <setting id="main_widget">mainwindow</setting>
       <setting id="module_namespace" />
       <setting id="module_name">q_gui_generic_app</setting>
       <setting id="main_classname">QGuiGenericApp</setting>
@@ -30,6 +30,7 @@
     <property name="width">800</property>
     <containerlayout manager="grid">
       <property type="col" id="0" name="weight">1</property>
+      <property type="row" id="0" name="weight">1</property>
     </containerlayout>
     <child>
       <object class="pygubu.builder.widgets.toplevelmenu" id="toplevelmenu3">
@@ -79,12 +80,13 @@
         <property name="width">200</property>
         <layout manager="grid">
           <property name="column">0</property>
-          <property name="row">1</property>
-          <property name="sticky">ew</property>
+          <property name="row">0</property>
+          <property name="sticky">nsew</property>
         </layout>
         <containerlayout manager="grid">
           <property type="col" id="0" name="weight">1</property>
           <property type="col" id="all" name="weight">1</property>
+          <property type="row" id="0" name="weight">1</property>
         </containerlayout>
         <child>
           <object class="ttk.Panedwindow" id="panedwindow1">
@@ -94,7 +96,7 @@
             <layout manager="grid">
               <property name="column">0</property>
               <property name="row">0</property>
-              <property name="sticky">ew</property>
+              <property name="sticky">nsew</property>
             </layout>
             <child>
               <object class="ttk.Panedwindow.Pane" id="pane1">
