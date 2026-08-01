@@ -13,8 +13,8 @@ class QGUIDialog:
 
         # don't even try to reuse a builder. it does seem to work.
         self.builder = builder = pygubu.Builder()
-        builder.add_resource_path(PROJECT_PATH)
-        builder.add_from_file(PROJECT_UI)
+        builder.add_resource_path(project_path)
+        builder.add_from_file(project_ui)
         self.mainwindow = builder.get_object(dialogbox_name, master)
 
         builder.connect_callbacks(self)
@@ -26,6 +26,7 @@ class QGUIDialog:
         self.logger.info("cancelled")
         self.mainwindow.destroy()
 
+    # noinspection PyUnusedLocal
     def on_close(self, event):
         self.on_cancel()
 

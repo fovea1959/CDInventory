@@ -137,12 +137,12 @@ class QGuiApp:
         self.mainwindow.mainloop()
 
     def on_cmd_quit(self):
-        self.mainwindow.on_close()
+        self.on_close()
 
     def on_cmd_preferences(self):
         # Create dialog window.
         # dialog = BadPreferencesDialog(self.mainwindow, g=G())
-        dialog = PreferencesDialog(self.mainwindow, g=self.g)
+        dialog = PrefsDialog(self.mainwindow, g=self.g)
         dialog.run()
         # Dialog was configured to run in modal state.
         # So wait until the window is closed.
@@ -259,8 +259,10 @@ class QGuiApp:
         table_widget.data_interface = EntityDataInterface(g=self.g)
 
         table_widget.menu.add_separator()
-        table_widget.menu.add_command(label="Open Musicbrainz for this release", command=lambda: self.command_open_musicbrainz_for_this_release(table_widget))
-        table_widget.menu.add_command(label="Send release id to Picard", command=lambda: self.command_send_release_id_to_picard(table_widget))
+        table_widget.menu.add_command(label="Open Musicbrainz for this release",
+                                      command=lambda: self.command_open_musicbrainz_for_this_release(table_widget))
+        table_widget.menu.add_command(label="Send release id to Picard",
+                                      command=lambda: self.command_send_release_id_to_picard(table_widget))
 
         table_widget.data_store = d
         table_widget.populate_tree()
@@ -372,7 +374,7 @@ class QGuiApp:
         self.mainwindow.after(100, self.poll_log_queue)
 
 
-class PreferencesDialog(QGUIDialog):
+class PrefsDialog(QGUIDialog):
     def __init__(self, master=None, g: G = None):
         super().__init__(master=master, dialogbox_name="preferences_dialog")
         self.g = g

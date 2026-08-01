@@ -60,7 +60,7 @@ class DAO:
         query = (
             sqlalchemy.select(CD)
             .outerjoin(MP3, CD.cd_musicbrainz_release_id == MP3.release_id)
-            .where(MP3.release_id == None)  # Filters out found records
+            .where(MP3.release_id.is_(None))  # Filters out found records
         )
         rv = self.session.scalars(query).all()
         return rv
