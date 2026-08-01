@@ -28,10 +28,6 @@ from CDInventoryEntities import CD
 
 from GFilterEditTable import *
 
-# from q_gui_generic_app import QGuiGenericApp
-from q_gui_generic_appui import QGuiGenericAppUI
-
-
 PREFS_FILE_NAME = "q_gui_prefs.json"
 
 PROJECT_PATH = pathlib.Path(__file__).parent
