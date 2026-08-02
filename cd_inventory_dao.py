@@ -75,6 +75,11 @@ class DAO:
         rv = self.session.scalars(query).all()
         return rv
 
+    def get_mp3_by_path(self, path: str = '') -> Optional[MP3]:
+        query = sqlalchemy.select(MP3).where(MP3.path == path)
+        rv = self.session.execute(query).scalar_one_or_none()
+        return rv
+
 
 # noinspection PyUnusedLocal
 def main(argv):

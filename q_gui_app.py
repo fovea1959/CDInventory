@@ -1,6 +1,7 @@
 #!/usr/bin/python3
-
+import collections
 import json
+import datetime
 import pathlib
 import queue
 import sys
@@ -22,11 +23,13 @@ import sqlalchemy
 from pythonjsonlogger.json import JsonFormatter
 
 import cd_inventory_dao
+import mp3_information_extractor
 import utils
-from cd_inventory_entities import CD
 
+from cd_inventory_entities import CD, MP3
 from generic_filter_edit_table import *
 from q_gui_dialog import *
+
 
 PREFS_FILE_NAME = "q_gui_prefs.json"
 
@@ -126,6 +129,8 @@ class QGuiApp:
         self.mp3s_frame = self.setup_mp3s_frame()
         self.unripped_cds_frame = self.setup_unripped_cds_frame()
 
+        self.status_text_var = self.builder.get_variable("status_text")
+
         self.panedwindow1 = self.builder.get_object("panedwindow1", master)
 
         self.setup_window()
@@ -170,33 +175,96 @@ class QGuiApp:
         self.g.preferences.gui_unripped_cd_column_widths = self.unripped_cds_frame.get_widths()
         self.mainwindow.destroy()
 
-    def on_cmd_about(self, itemid):
-        self.logger.important("menuitem_test hit: %s", itemid)
+    def on_cmd_load_mp3s(self):
+        self.logger.important("loading mp3s")
+        self.status_text_var.set("Loading mp3s")
 
         # self.btn.config(state="disabled")
         # self.status.config(text="Loading data from database...")
         # self.result_label.config(text="")
 
         # 2. Run slow query in a background thread
-        threading.Thread(target=self.fetch_query, daemon=True).start()
+        threading.Thread(target=self.load_mp3s, daemon=True).start()
 
-    def fetch_query(self):
-        try:
-            # Simulate or execute slow SQLAlchemy query here
-            # result = session.query(MyModel).all()
-            import time
-            time.sleep(3)  # Simulating a 3-second slow query
-            data = "Query finished successfully!"
-        except Exception as e:
-            data = f"Error: {e}"
+    def load_mp3s(self):
+        dao = cd_inventory_dao.DAO()
+        with dao:
+            now = datetime.datetime.now().astimezone()
+            root_path = pathlib.Path(self.g.preferences.mp3_path)
+            x = mp3_information_extractor.MP3InfoExtractor(root_path)
+            last_dirpath = None
+            counts = collections.Counter()
+            all_mp3_path_strings = set()
+            for dirpath, dirname, filenames in root_path.walk():
+                if dirpath != last_dirpath:
+                    self.status_text_var.set(f"Loading {dirpath}")
+                    last_dirpath = dirpath
+                for f1 in filenames:
+                    counts['total files'] += 1
+                    if not str(f1).lower().endswith(".mp3"):
+                        counts['not MP3'] += 1
+                        continue
 
-        self.logger.important("query done")
-        # 3. Safely send results back to main thread using root.after
-        self.mainwindow.after(0, self.update_ui, data)
+                    p1 = dirpath / f1
+                    r_p1 = p1.relative_to(root_path)
+                    mp3 = dao.get_mp3_by_path(str(r_p1))
 
-    def update_ui(self, data):
-        self.logger.important("slow query complete: %s", data)
-        self.toast(data, 10)
+                    counts['mp3s'] += 1
+                    all_mp3_path_strings.add(str(r_p1))
+
+                    need_to_update = False
+                    if mp3 is None:
+                        need_to_update = True
+                    else:
+                        mtime = datetime.datetime.fromtimestamp(p1.stat().st_mtime)
+                        wuz = mp3.updated_time
+                        if mtime > wuz:
+                            self.logger.info('%s: mtime %s, database updated %s, so updating', r_p1, mtime, wuz)
+                            need_to_update = True
+
+                    if need_to_update:
+                        j = x.get_information(p1)
+                        if j is None:
+                            self.logger.important("Can't get MP3 tags from %s", p1)
+                            counts['MP3s w/ no tags'] += 1
+                        else:
+                            iz_new = False
+                            if mp3 is None:
+                                mp3 = MP3()
+                                iz_new = True
+                            mp3_information_extractor.fill_in_mp3_from_dict(mp3, j)
+                            mp3.updated_time = now
+                            if iz_new:
+                                counts['MP3s created'] += 1
+                                dao.session.add(mp3)
+                            else:
+                                counts['MP3s updated'] += 1
+                            if (counts['MP3s created'] + counts['MP3s updated']) % 100 == 0:
+                                dao.session.commit()
+                    else:
+                        counts['MP3s up-to-date'] += 1
+            dao.session.commit()
+            self.logger.important("had %d MP3s", len(all_mp3_path_strings))
+
+            # now need to get rid of old mp3s
+            for mp3 in dao.get_all_mp3s():
+                if mp3.path not in all_mp3_path_strings:
+                    dao.session.delete(mp3)
+                    counts['MP3s deleted'] += 1
+                    if counts['MP3s deleted'] % 100 == 0:
+                        dao.session.commit()
+            dao.session.commit()
+
+            m = f"MP3 load completed: {counts}"
+            self.logger.important(m)
+            # 3. Safely send results back to main thread using root.after
+            self.mainwindow.after(0, self.mp3_load_done, m)
+
+    def mp3_load_done(self, data):
+        # self.logger.important("slow query complete: %s", data)
+        # self.status_text_var.set(data)
+        # self.toast(data, 10)
+        pass
 
     def get_cd_for_command(self, fte: FilterEditTable):
         cd: CD | None = None

@@ -6,30 +6,13 @@ import json
 import logging
 import sys
 
-from dateutil import parser
 from sqlalchemy import select
 
-import CDInventoryDao
+import cd_inventory_dao
+import mp3_information_extractor
 import utils
-from CDInventoryEntities import MP3
+from cd_inventory_entities import MP3
 from utils import extract_data, extract_datum
-
-
-def fill_in_mp3_from_dict(mp3: MP3, mp3_dict: dict):
-    mp3.path = extract_datum(mp3_dict, 'path')
-    mp3.title = extract_datum(mp3_dict, 'TIT2')
-    mp3.track_artists = extract_datum(mp3_dict, 'TPE1')
-    mp3.album_artists = extract_datum(mp3_dict, 'TPE2')
-    mp3.release_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Album Id)"')
-    mp3.release_group_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Group Id)"')
-    mp3.track_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Track Id)"')
-    # recording_id
-    s = extract_datum(mp3_dict, "info.mtime")
-    mp3.mtime = parser.parse(s).astimezone()
-    # encoded_time
-    s = extract_datum(mp3_dict, "TDEN")
-    if s is not None:
-        mp3.encoded_time = datetime.datetime.fromisoformat(s).astimezone()
 
 
 def main(argv):
@@ -46,7 +29,7 @@ def main(argv):
 
     commit_batchsize = 50
 
-    with CDInventoryDao.DAO() as dao:
+    with cd_inventory_dao.DAO() as dao:
         with open(args.file, 'r') as f:
             data = json.load(f)
 
@@ -68,7 +51,7 @@ def main(argv):
                 mp3 = MP3()
                 dao.session.add(mp3)
 
-            fill_in_mp3_from_dict(mp3, mp3_dict)
+            mp3_information_extractor.fill_in_mp3_from_dict(mp3, mp3_dict)
             mp3.updated_time = now
             mp3.json_text = utils.compact_json(mp3_dict)
 

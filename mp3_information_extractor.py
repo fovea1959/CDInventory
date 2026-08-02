@@ -5,6 +5,10 @@ import pathlib
 
 import eyed3
 import eyed3.id3
+from dateutil import parser
+
+from cd_inventory_entities import MP3
+from utils import extract_datum, compact_json
 
 
 class ListOnCollisionDict(dict):
@@ -25,39 +29,40 @@ class MP3InfoExtractor:
     def __init__(self, root_dir: pathlib.Path = None):
         self.root_path = pathlib.Path(root_dir).absolute() if root_dir is not None else None
 
-    def get_information(self, path, last_mtime: datetime.datetime = None):
-        mtime = datetime.datetime.fromtimestamp(path.stat().st_mtime)
-        if last_mtime is None or mtime > last_mtime:
-            audio_file = eyed3.core.load(path)
-            if audio_file and audio_file.info and audio_file.tag:
-                r_path = path = pathlib.Path(audio_file.path)
-                if self.root_path is not None:
-                    try:
-                        r_path = path.relative_to(self.root_path)
-                    except ValueError:
-                        pass
+    def get_information(self, path, mtime: datetime.datetime = None):
+        audio_file = eyed3.core.load(path)
+        if audio_file and audio_file.info and audio_file.tag:
+            r_path = path = pathlib.Path(audio_file.path)
+            if self.root_path is not None:
+                try:
+                    r_path = path.relative_to(self.root_path)
+                except ValueError:
+                    pass
 
-                info = dataclasses.asdict(audio_file.info)
-                info['vbr'], info['bitrate'] = audio_file.info.bit_rate
-                info['mtime'] = mtime
-                j = ListOnCollisionDict(
-                        path=str(r_path),
-                        info=info,
-                        tag_version='.'.join(str(i) for i in audio_file.tag.version),
-                        )
+            info = dataclasses.asdict(audio_file.info)
+            info['vbr'], info['bitrate'] = audio_file.info.bit_rate
+            if mtime is None:  # don't need to refetch if we already know it
+                mtime = datetime.datetime.fromtimestamp(path.stat().st_mtime)
+            info['mtime'] = mtime
 
-                for frame_id in audio_file.tag.frame_set:
-                    frame_set = audio_file.tag.frame_set[frame_id]
-                    for f in frame_set:
-                        k = frame_id.decode()
-                        if isinstance(f, eyed3.id3.frames.UserTextFrame):
-                            k = k + "(" + f.description + ")"
-                        if isinstance(f, eyed3.id3.frames.UniqueFileIDFrame):
-                            k = k + "(" + f.owner_id.decode() + ")"
-                        if isinstance(f, eyed3.id3.frames.DescriptionLangTextFrame):
-                            k = k + "(" + f.description + ")[" + f.lang.decode() + "]"
-                        j[k] = self.v(f)
-                return j
+            j = ListOnCollisionDict(
+                    path=str(r_path),
+                    info=info,
+                    tag_version='.'.join(str(i) for i in audio_file.tag.version),
+                    )
+
+            for frame_id in audio_file.tag.frame_set:
+                frame_set = audio_file.tag.frame_set[frame_id]
+                for f in frame_set:
+                    k = frame_id.decode()
+                    if isinstance(f, eyed3.id3.frames.UserTextFrame):
+                        k = k + "(" + f.description + ")"
+                    if isinstance(f, eyed3.id3.frames.UniqueFileIDFrame):
+                        k = k + "(" + f.owner_id.decode() + ")"
+                    if isinstance(f, eyed3.id3.frames.DescriptionLangTextFrame):
+                        k = k + "(" + f.description + ")[" + f.lang.decode() + "]"
+                    j[k] = self.v(f)
+            return j
         return None
 
     def v(self, frame):
@@ -69,9 +74,10 @@ class MP3InfoExtractor:
             return frame.url
         elif isinstance(frame, eyed3.id3.frames.UniqueFileIDFrame):
             rv = frame.uniq_id
+            # noinspection PyBroadException
             try:
                 rv = rv.decode()
-            except:
+            except Exception:
                 pass
             return rv
         elif isinstance(frame, eyed3.id3.frames.ImageFrame):
@@ -88,13 +94,38 @@ class MP3InfoExtractor:
         elif isinstance(frame, eyed3.id3.frames.MusicCDIdFrame):
             return self.ascii_ize(frame.toc)
         elif isinstance(frame, eyed3.id3.frames.PrivateFrame):
-            return dict(owner_id = frame.owner_id.decode(), owner_data = self.ascii_ize(frame.owner_data))
+            return dict(owner_id=frame.owner_id.decode(), owner_data=self.ascii_ize(frame.owner_data))
         else:
             return str(type(frame)) + " " + str(frame.render())
 
     @staticmethod
     def ascii_ize(v):
         return base64.urlsafe_b64encode(v).decode('utf-8').replace('=', '')
+
+
+def fill_in_mp3_from_dict(mp3: MP3, mp3_dict: dict):
+    mp3.path = extract_datum(mp3_dict, 'path')
+    mp3.title = extract_datum(mp3_dict, 'TIT2')
+    mp3.track_artists = extract_datum(mp3_dict, 'TPE1')
+    mp3.album_artists = extract_datum(mp3_dict, 'TPE2')
+    mp3.release_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Album Id)"')
+    mp3.release_group_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Group Id)"')
+    mp3.track_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Track Id)"')
+    # recording_id
+    s = extract_datum(mp3_dict, "info.mtime")
+    if isinstance(s, datetime.datetime):
+        mp3.mtime = s
+    elif isinstance(s, str):
+        mp3.mtime = parser.parse(s).astimezone()
+    elif s is None:
+        mp3.mtime = None
+    else:
+        raise ValueError(f"Can't extract info.mtime from {mp3_dict}")
+    # encoded_time
+    s = extract_datum(mp3_dict, "TDEN")
+    if s is not None:
+        mp3.encoded_time = datetime.datetime.fromisoformat(s).astimezone()
+    mp3.json_text = compact_json(mp3_dict, default=str)
 
 
 def main(argv):
