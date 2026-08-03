@@ -38,7 +38,7 @@ class DAO:
 
     def get_location(self, location_id: str = '') -> Optional[Location]:
         query = sqlalchemy.select(Location).where(Location.location_id == location_id)
-        rv = self.session.execute(query).scalar_one_or_none()
+        rv = self.session.scalars(query).one_or_none()
         return rv
 
     def get_all_locations(self):
@@ -48,7 +48,7 @@ class DAO:
 
     def get_cd_by_barcode(self, barcode: str = '') -> Optional[CD]:
         query = sqlalchemy.select(CD).where(CD.cd_barcode == barcode)
-        rv = self.session.execute(query).scalar_one_or_none()
+        rv = self.session.scalars(query).one_or_none()
         return rv
 
     def get_all_cds(self):
@@ -67,7 +67,7 @@ class DAO:
 
     def get_cd_by_musicbrainz_id(self, musicbrainz_id: str = '') -> Optional[CD]:
         query = sqlalchemy.select(CD).where(CD.cd_musicbrainz_release_id == musicbrainz_id)
-        rv = self.session.execute(query).scalar_one_or_none()
+        rv = self.session.scalars(query).one_or_none()
         return rv
 
     def get_all_mp3s(self):
@@ -77,7 +77,12 @@ class DAO:
 
     def get_mp3_by_path(self, path: str = '') -> Optional[MP3]:
         query = sqlalchemy.select(MP3).where(MP3.path == path)
-        rv = self.session.execute(query).scalar_one_or_none()
+        rv = self.session.scalars(query).one_or_none()
+        return rv
+
+    def get_mp3s_with_no_encoding_time(self):
+        query = sqlalchemy.select(MP3).where(MP3.encoded_time.is_(None))
+        rv = self.session.scalars(query).all()
         return rv
 
 
