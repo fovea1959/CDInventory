@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass
 from logging.handlers import RotatingFileHandler
 
 from tkinter import font as tkfont
+from tkinter import filedialog
 
 import pygubu
 
@@ -41,6 +42,7 @@ RESOURCE_PATHS = [PROJECT_PATH]
 @dataclass
 class Preferences:
     mp3_path: str | None = None
+    mp3u_file: str | None = None
     gui_geometry: str | None = None
     gui_panedwindow1_sash: int | None = None
     gui_cd_column_widths: List[int] | None = None
@@ -125,6 +127,8 @@ class QGuiApp:
             else logging.Formatter('%(levelname)s %(name)s %(message)s')
         self.mainwindow.after(100, self.poll_log_queue)
 
+        self.m_mp3s = self.builder.get_object("m_mp3s")
+
         self.cds_frame = self.setup_cds_frame()
         self.mp3s_frame = self.setup_mp3s_frame()
         self.unripped_cds_frame = self.setup_unripped_cds_frame()
@@ -175,10 +179,49 @@ class QGuiApp:
         self.g.preferences.gui_unripped_cd_column_widths = self.unripped_cds_frame.get_widths()
         self.mainwindow.destroy()
 
+    def on_cmd_about(self):
+        pass
+
+    def on_cmd_save_playlist_newest_first(self):
+        if self.g.preferences.mp3u_file is not None:
+            mp3u_path = pathlib.Path(self.g.preferences.mp3u_file)
+            initialdir = mp3u_path.parent
+            initialfile = mp3u_path.name
+        elif self.g.preferences.mp3_path is not None:
+            initialdir = pathlib.Path(self.g.preferences.mp3_path)
+            initialfile = ''
+        else:
+            initialdir = ''
+            initialfile = ''
+        # Opens the file selector and returns the absolute file path as a string
+        file_path = filedialog.asksaveasfilename(
+            title="Save playlist (newest recordings first)",
+            initialdir=initialdir,
+            initialfile=initialfile,
+            filetypes=[("MP3 playlists", "*.m3u"), ("All files", "*.*")]
+        )
+        if file_path:
+            self.g.preferences.mp3u_file = file_path
+            self.logger.info("Saving MP3U to %s", file_path)
+
+            l_mp3 = []
+            self.logger.info("Fetching mp3s")
+            for mp3 in self.g.dao.get_all_mp3s():
+                l_mp3.append(mp3)
+            self.logger.info("Sorting mp3s")
+            l_mp3 = utils.sort_mp3s_newest_first(l_mp3)
+            self.logger.info("Writing mp3s")
+            with open(file_path, "w") as f:
+                for mp3 in l_mp3:
+                    print(f'# {mp3.age_sort_key()} {mp3.encoded_time} {mp3.mtime}', file=f)
+                    print(mp3.path, file=f)
+            self.logger.info("Done")
+
     def on_cmd_load_mp3s(self):
         self.logger.important("loading mp3s")
         self.status_text_var.set("Loading mp3s")
 
+        self.m_mp3s.entryconfig("Load MP3s", state="disabled")
         # self.btn.config(state="disabled")
         # self.status.config(text="Loading data from database...")
         # self.result_label.config(text="")
@@ -260,10 +303,11 @@ class QGuiApp:
             # 3. Safely send results back to main thread using root.after
             self.mainwindow.after(0, self.mp3_load_done, m)
 
-    def mp3_load_done(self, data):
+    def mp3_load_done(self, m):
         # self.logger.important("slow query complete: %s", data)
-        # self.status_text_var.set(data)
+        self.status_text_var.set(m)
         # self.toast(data, 10)
+        self.m_mp3s.entryconfig("Load MP3s", state="normal")
         pass
 
     def get_cd_for_command(self, fte: FilterEditTable):

@@ -68,6 +68,12 @@
                     <property name="label" translatable="yes">Load MP3s</property>
                   </object>
                 </child>
+                <child>
+                  <object class="tk.Menuitem.Command" id="mc_save_playlist_newest_first" named="True">
+                    <property name="command" type="command" cbtype="simple">on_cmd_save_playlist_newest_first</property>
+                    <property name="label" translatable="yes">Save Playlist (newest first)</property>
+                  </object>
+                </child>
               </object>
             </child>
             <child>
@@ -76,7 +82,7 @@
                 <property name="tearoff">false</property>
                 <child>
                   <object class="tk.Menuitem.Command" id="mc_about" named="True">
-                    <property name="command" type="command" cbtype="with_wid">on_cmd_about</property>
+                    <property name="command" type="command" cbtype="simple">on_cmd_about</property>
                     <property name="label" translatable="yes">About</property>
                   </object>
                 </child>

@@ -112,6 +112,9 @@ class MP3(BaseWithJson):
 
     updated_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
+    def age_sort_key(self):
+        return self.encoded_time or self.mtime
+
     def __repr__(self) -> str:
         return self._repr(
             path=self.path,

@@ -4,6 +4,7 @@ import json
 import logging
 import queue
 import threading
+from collections.abc import Iterable
 
 import cv2
 import jsonpath_ng
@@ -11,8 +12,10 @@ import musicbrainzngs
 import soundfile as sf
 import sounddevice as sd
 
-from cd_inventory_entities import CD, Location, MusicbrainzRelease
+from cd_inventory_entities import CD, Location, MusicbrainzRelease, MP3
 from cd_inventory_dao import DAO
+
+logger = logging.getLogger(__name__)
 
 
 class ContentFilter(logging.Filter):
@@ -304,8 +307,40 @@ def fill_in_release_from_mb_json(release: MusicbrainzRelease, musicbrainz_releas
     release.catalog_numbers = "; ".join(ll) if len(ll) > 0 else None
 
 
-def compact_json(o) -> str:
-    return json.dumps(o, sort_keys=True, separators=(',', ':'))
+def compact_json(o, **kwargs) -> str:
+    return json.dumps(o, sort_keys=True, separators=(',', ':'), **kwargs)
+
+
+def sort_mp3s_newest_first(l_mp3s: list[MP3]) -> list[MP3]:
+    l_mp3s.sort(key=lambda mp3: (mp3.age_sort_key(), mp3.path))
+
+    # Step 2: Group close items together sequentially
+    threshold = datetime.timedelta(minutes=5)
+    clusters = []
+    current_cluster = [l_mp3s[0]] if l_mp3s else []
+
+    for current_mp3 in l_mp3s[1:]:
+        current_date = current_mp3.age_sort_key()
+        preceding_date = current_cluster[-1].age_sort_key()
+        # Check if this date is close to the LAST date added to the current cluster
+        if current_date - preceding_date <= threshold:
+            current_cluster.append(current_mp3)
+        else:
+            clusters.append(current_cluster)
+            current_cluster = [current_mp3]
+
+    if current_cluster:
+        clusters.append(current_cluster)
+
+    clusters.reverse()
+
+    rv = []
+    for i, cluster in enumerate(clusters):
+        logger.debug("Group %d", i + 1)
+        for mp3 in cluster:
+            logger.debug("- %s %s %s %s", mp3.age_sort_key(), mp3.encoded_time, mp3.mtime, mp3.path)
+            rv.append(mp3)
+    return rv
 
 
 VERBOSE_LEVEL_NUM = 15
