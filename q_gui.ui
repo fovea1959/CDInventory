@@ -74,6 +74,12 @@
                     <property name="label" translatable="yes">Save Playlist (newest first)</property>
                   </object>
                 </child>
+                <child>
+                  <object class="tk.Menuitem.Command" id="mc_set_mp3s_tden" named="True">
+                    <property name="command" type="command" cbtype="simple">on_cmd_set_mp3s_tden</property>
+                    <property name="label" translatable="yes">Save Mp3 files TDEN</property>
+                  </object>
+                </child>
               </object>
             </child>
             <child>

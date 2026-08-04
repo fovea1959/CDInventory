@@ -68,7 +68,7 @@ class CD(Base):
             title=self.cd_title,
             artist=self.cd_artists,
             release_id=self.cd_musicbrainz_release_id,
-            location_id=self.cd_location_id
+            location_id=self.cd_location_id,
         )
 
 
@@ -119,7 +119,7 @@ class MP3(BaseWithJson):
         return self._repr(
             path=self.path,
             title=self.title,
-            release_id=self.release_id,
+            release_id=self.release_id
         )
 
 

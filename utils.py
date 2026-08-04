@@ -4,7 +4,6 @@ import json
 import logging
 import queue
 import threading
-from collections.abc import Iterable
 
 import cv2
 import jsonpath_ng

@@ -1,14 +1,19 @@
 import base64
 import dataclasses
 import datetime
+import logging
 import pathlib
 
 import eyed3
+import eyed3.core
 import eyed3.id3
 from dateutil import parser
+from eyed3.id3.frames import TextFrame, DateFrame
 
 from cd_inventory_entities import MP3
 from utils import extract_datum, compact_json
+
+logger = logging.getLogger(__name__)
 
 
 class ListOnCollisionDict(dict):
@@ -128,14 +133,65 @@ def fill_in_mp3_from_dict(mp3: MP3, mp3_dict: dict):
     mp3.json_text = compact_json(mp3_dict, default=str)
 
 
+'''
+class FixedEyeD3CoreDate(eyed3.core.Date):
+    def __str__(self):
+        # behaviour
+        s = "%d" % self.year
+        if self.month:
+            s += "-%s" % str(self.month).rjust(2, '0')
+            if self.day:
+                s += "-%s" % str(self.day).rjust(2, '0')
+                if self.hour is not None:
+                    s += "T%s" % str(self.hour).rjust(2, '0')
+                    if self.minute is not None:
+                        s += ":%s" % str(self.minute).rjust(2, '0')
+                        if self.second is not None:
+                            s += ":%s" % str(self.second).rjust(2, '0')
+        return s
+
+
+def setDateFrame(tag, frame_id, date_val):
+    if frame_id in tag.frame_set:
+        tag.frame_set[frame_id][0].date = date_val
+    else:
+        tag.frame_set[frame_id] = DateFrame(frame_id, date_val)
+'''
+
+
+def set_encoded_time(path: pathlib.Path, mtime: datetime.datetime):
+    s_mtime = mtime.isoformat()
+    logger.important("%s -> %s %s", path, s_mtime, mtime)
+
+    audio_file = eyed3.core.load(path)
+    if audio_file.tag is None:
+        audio_file.initTag(version=(2, 4, 0))
+    else:
+        audio_file.tag.version = eyed3.id3.ID3_V2_4
+
+    audio_file.tag.user_text_frames.set(s_mtime, description=u"original_mtime")
+
+    # eyeD3 after commit c9246fff91a74001ac278295003cc2cc3b8946f4 does not output seconds from a eyed3.core.Date
+    # stick to version 0.9.7 for right now
+    eyed3_date = eyed3.core.Date.parse(s_mtime[:19])
+    logger.info('%s -> eyed3 %s', s_mtime, eyed3_date)
+    audio_file.tag.encoding_date = eyed3_date
+    # this is what we tried to do to force it
+    #eyed3_date_val = FixedEyeD3CoreDate(year=mtime.year, month=mtime.month, day=mtime.day, hour=mtime.hour, minute=mtime.minute, second=mtime.second)
+    #setDateFrame(audio_file.tag, b'TDEN', eyed3_date_val)
+
+    # audio_file.tag.frame_set[b"TDEN"][0].date = s_mtime
+    audio_file.tag.save()
+
+
 def main(argv):
     import argparse
     import json
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file')
-    parser.add_argument('--recursive', action='store_true')
-    parser.add_argument('--verbose', action='store_true')
-    args = parser.parse_args(argv)
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('file')
+    arg_parser.add_argument('--recursive', action='store_true')
+    arg_parser.add_argument('--verbose', action='store_true')
+    args = arg_parser.parse_args(argv)
 
     logging.info('called with %s', args)
 

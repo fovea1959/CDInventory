@@ -16,4 +16,5 @@ python-json-logger
 python-dateutil>=2.9.0
 thefuzz
 jsonpath_ng
-
+# 0.9.9 eyed3.core.Date does not keep seconds, so use older version
+eyeD3==0.9.7

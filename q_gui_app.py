@@ -24,7 +24,7 @@ import sqlalchemy
 from pythonjsonlogger.json import JsonFormatter
 
 import cd_inventory_dao
-import mp3_information_extractor
+import mp3_information
 import utils
 
 from cd_inventory_entities import CD, MP3
@@ -217,8 +217,50 @@ class QGuiApp:
                     print(mp3.path, file=f)
             self.logger.info("Done")
 
+    def on_cmd_set_mp3s_tden(self):
+        self.status_text_var.set("Loading mp3s")
+
+        self.m_mp3s.entryconfig("Save Mp3 files TDEN", state="disabled")
+        # self.btn.config(state="disabled")
+        # self.status.config(text="Loading data from database...")
+        # self.result_label.config(text="")
+
+        # 2. Run slow query in a background thread
+        threading.Thread(target=self.set_mp3s_tden, daemon=True).start()
+
+    def set_mp3s_tden(self):
+        dao = cd_inventory_dao.DAO()
+        root_path = pathlib.Path(self.g.preferences.mp3_path)
+        x = mp3_information.MP3InfoExtractor(root_path)
+        with dao:
+            count = 0
+            for mp3 in dao.get_mp3s_with_no_encoding_time():
+                mp3_path = root_path / pathlib.Path(mp3.path)
+                d = x.get_information(mp3_path)
+                new_mp3 = MP3()
+                mp3_information.fill_in_mp3_from_dict(new_mp3, d)
+                if new_mp3.encoded_time is None:
+                    # we need to set the attributes
+                    self.logger.important("setting encoded date for %s to %s", mp3_path, new_mp3.mtime)
+                    mp3_information.set_encoded_time(mp3_path, new_mp3.mtime)
+                    d = x.get_information(mp3_path)
+                    mp3_information.fill_in_mp3_from_dict(mp3, d)
+                    mp3.updated_time = datetime.datetime.now().astimezone()
+                    dao.session.add(mp3)
+                count += 1
+
+            dao.session.commit()
+
+            m = f"{count} needed TDEN"
+            self.logger.important(m)
+            self.mainwindow.after(0, self.set_mp3s_tden_done, m)
+
+    def set_mp3s_tden_done(self, m):
+        self.status_text_var.set(m)
+        self.m_mp3s.entryconfig("Save Mp3 files TDEN", state="normal")
+        pass
+
     def on_cmd_load_mp3s(self):
-        self.logger.important("loading mp3s")
         self.status_text_var.set("Loading mp3s")
 
         self.m_mp3s.entryconfig("Load MP3s", state="disabled")
@@ -234,7 +276,7 @@ class QGuiApp:
         with dao:
             now = datetime.datetime.now().astimezone()
             root_path = pathlib.Path(self.g.preferences.mp3_path)
-            x = mp3_information_extractor.MP3InfoExtractor(root_path)
+            x = mp3_information.MP3InfoExtractor(root_path)
             last_dirpath = None
             counts = collections.Counter()
             all_mp3_path_strings = set()
@@ -275,7 +317,7 @@ class QGuiApp:
                             if mp3 is None:
                                 mp3 = MP3()
                                 iz_new = True
-                            mp3_information_extractor.fill_in_mp3_from_dict(mp3, j)
+                            mp3_information.fill_in_mp3_from_dict(mp3, j)
                             mp3.updated_time = now
                             if iz_new:
                                 counts['MP3s created'] += 1
