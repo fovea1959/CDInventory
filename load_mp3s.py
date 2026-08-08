@@ -9,10 +9,10 @@ import sys
 from sqlalchemy import select
 
 import cd_inventory_dao
-import mp3_information_extractor
+import mp3_information
 import utils
 from cd_inventory_entities import MP3
-from utils import extract_data, extract_datum
+from utils import extract_datum
 
 
 def main(argv):
@@ -51,12 +51,12 @@ def main(argv):
                 mp3 = MP3()
                 dao.session.add(mp3)
 
-            mp3_information_extractor.fill_in_mp3_from_dict(mp3, mp3_dict)
+            mp3_information.fill_in_mp3_from_dict(mp3, mp3_dict)
             mp3.updated_time = now
             mp3.json_text = utils.compact_json(mp3_dict)
 
             if i % commit_batchsize == (commit_batchsize - 1):
-                logging.info ("commit...")
+                logging.info("commit...")
                 dao.session.commit()
 
         logging.info("commit...")

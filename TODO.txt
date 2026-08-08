@@ -1,0 +1,3 @@
+- look for missing MP3gain tags
+- look for multiple TDEN values (look in Edgar Winter folder)
+- missing release ids in the UI (see Beatles 1967-1970)

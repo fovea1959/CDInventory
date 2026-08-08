@@ -8,7 +8,6 @@ import eyed3
 import eyed3.core
 import eyed3.id3
 from dateutil import parser
-from eyed3.id3.frames import TextFrame, DateFrame
 
 from cd_inventory_entities import MP3
 from utils import extract_datum, compact_json
@@ -46,7 +45,7 @@ class MP3InfoExtractor:
 
             info = dataclasses.asdict(audio_file.info)
             info['vbr'], info['bitrate'] = audio_file.info.bit_rate
-            if mtime is None:  # don't need to refetch if we already know it
+            if mtime is None:  # only fetch if we do not already know it
                 mtime = datetime.datetime.fromtimestamp(path.stat().st_mtime)
             info['mtime'] = mtime
 
@@ -116,7 +115,7 @@ def fill_in_mp3_from_dict(mp3: MP3, mp3_dict: dict):
     mp3.release_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Album Id)"')
     mp3.release_group_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Group Id)"')
     mp3.track_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Track Id)"')
-    # recording_id
+    mp3.recording_id = extract_datum(mp3_dict, '"UFID(http://musicbrainz.org)"')
     s = extract_datum(mp3_dict, "info.mtime")
     if isinstance(s, datetime.datetime):
         mp3.mtime = s
@@ -131,32 +130,6 @@ def fill_in_mp3_from_dict(mp3: MP3, mp3_dict: dict):
     if s is not None:
         mp3.encoded_time = datetime.datetime.fromisoformat(s).astimezone()
     mp3.json_text = compact_json(mp3_dict, default=str)
-
-
-'''
-class FixedEyeD3CoreDate(eyed3.core.Date):
-    def __str__(self):
-        # behaviour
-        s = "%d" % self.year
-        if self.month:
-            s += "-%s" % str(self.month).rjust(2, '0')
-            if self.day:
-                s += "-%s" % str(self.day).rjust(2, '0')
-                if self.hour is not None:
-                    s += "T%s" % str(self.hour).rjust(2, '0')
-                    if self.minute is not None:
-                        s += ":%s" % str(self.minute).rjust(2, '0')
-                        if self.second is not None:
-                            s += ":%s" % str(self.second).rjust(2, '0')
-        return s
-
-
-def setDateFrame(tag, frame_id, date_val):
-    if frame_id in tag.frame_set:
-        tag.frame_set[frame_id][0].date = date_val
-    else:
-        tag.frame_set[frame_id] = DateFrame(frame_id, date_val)
-'''
 
 
 def set_encoded_time(path: pathlib.Path, mtime: datetime.datetime):
@@ -176,11 +149,7 @@ def set_encoded_time(path: pathlib.Path, mtime: datetime.datetime):
     eyed3_date = eyed3.core.Date.parse(s_mtime[:19])
     logger.info('%s -> eyed3 %s', s_mtime, eyed3_date)
     audio_file.tag.encoding_date = eyed3_date
-    # this is what we tried to do to force it
-    #eyed3_date_val = FixedEyeD3CoreDate(year=mtime.year, month=mtime.month, day=mtime.day, hour=mtime.hour, minute=mtime.minute, second=mtime.second)
-    #setDateFrame(audio_file.tag, b'TDEN', eyed3_date_val)
 
-    # audio_file.tag.frame_set[b"TDEN"][0].date = s_mtime
     audio_file.tag.save()
 
 

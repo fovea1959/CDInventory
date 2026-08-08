@@ -2,8 +2,10 @@
 import collections
 import json
 import datetime
+import os
 import pathlib
 import queue
+import subprocess
 import sys
 import threading
 import urllib.error
@@ -378,8 +380,7 @@ class QGuiApp:
         if cd is not None:
             release_id = cd.cd_musicbrainz_release_id
             self.logger.info("Sending release %s to picard", release_id)
-            url = f"http://127.0.0.1:8000/openalbum?id={release_id}"
-            self.request_url(url)
+            self.run_picard(['LOAD', f'mbid://release/{release_id}'])
 
     def command_open_musicbrainz_for_this_release(self, fte: FilterEditTable):
         cd = self.get_cd_for_command(fte)
@@ -445,14 +446,54 @@ class QGuiApp:
         table_widget.data_interface = ReadOnlyDataInterface(g=self.g)
 
         table_widget.menu.add_separator()
-        table_widget.menu.add_command(label="Boo!")
-
+        table_widget.menu.add_command(label="Send file to Picard",
+                                      command=lambda: self.command_send_file_to_picard(table_widget))
+        table_widget.menu.add_command(label="Send directory to Picard",
+                                      command=lambda: self.command_send_directory_to_picard(table_widget))
         table_widget.data_store = d
         table_widget.populate_tree()
 
         table_widget.pack(fill="both", expand=True)
 
         return table_widget
+
+    def command_send_file_to_picard(self, fte: FilterEditTable):
+        mp3 = self.get_mp3_for_command(fte)
+        if mp3 is not None:
+            p_path = pathlib.Path(self.g.preferences.mp3_path) / pathlib.Path(mp3.path)
+            path = str(p_path)
+            self.logger.info("Sending file '%s' to picard", path)
+            self.run_picard(['LOAD', path])
+
+    def command_send_directory_to_picard(self, fte: FilterEditTable):
+        mp3 = self.get_mp3_for_command(fte)
+        if mp3 is not None:
+            p_path = pathlib.Path(self.g.preferences.mp3_path) / pathlib.Path(mp3.path)
+            p_path_parent = p_path.parent
+            path = str(p_path_parent)
+            self.logger.info("Sending directory '%s' to picard", path)
+            self.run_picard(['LOAD', path])
+
+    @staticmethod
+    def run_picard(cmd: list[str]):
+        my_env = os.environ.copy()
+
+        # opencv in our venv is messing stuff up. don't pass it along
+        my_env.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
+        my_env.pop("QT_QPA_FONTDIR", None)
+
+        complete_command = ['picard', '-e']
+        complete_command.extend(cmd)
+
+        process = subprocess.Popen(complete_command, env=my_env)
+
+    def get_mp3_for_command(self, fte: FilterEditTable):
+        mp3: MP3 | None = None
+        data_row: dict = fte.get_data_for_right_menu_click()
+        self.logger.info("Right click from %s", data_row)
+        if data_row is not None:
+            mp3 = data_row.get('raw')
+        return mp3
 
     def setup_unripped_cds_frame(self):
         d = []
@@ -477,6 +518,12 @@ class QGuiApp:
         tab_container = self.builder.get_object("unripped_cd_frame")
         table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
         table_widget.data_interface = ReadOnlyDataInterface(g=self.g)
+
+        table_widget.menu.add_separator()
+        table_widget.menu.add_command(label="Open Musicbrainz for this release",
+                                      command=lambda: self.command_open_musicbrainz_for_this_release(table_widget))
+        table_widget.menu.add_command(label="Send release id to Picard",
+                                      command=lambda: self.command_send_release_id_to_picard(table_widget))
 
         table_widget.data_store = d
         table_widget.populate_tree()
