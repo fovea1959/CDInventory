@@ -27,8 +27,8 @@ from playwright._impl._errors import TargetClosedError
 from pythonjsonlogger.json import JsonFormatter
 
 import utils
-from CDInventoryDao import DAO
-from CDInventoryEntities import CD, Location
+from cd_inventory_dao import DAO
+from cd_inventory_entities import CD, Location
 
 from scan_gui_generic_app import CDInventoryGenericApp
 
