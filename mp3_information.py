@@ -116,6 +116,8 @@ def fill_in_mp3_from_dict(mp3: MP3, mp3_dict: dict):
     mp3.release_group_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Group Id)"')
     mp3.track_id = extract_datum(mp3_dict, '"TXXX(MusicBrainz Release Track Id)"')
     mp3.recording_id = extract_datum(mp3_dict, '"UFID(http://musicbrainz.org)"')
+    mp3.acoustid_id = extract_datum(mp3_dict, '"TXXX(Acoustid Id)"')
+    mp3.acoustid_fingerprint = extract_datum(mp3_dict, '"TXXX(Acoustid Fingerprint)"')
     s = extract_datum(mp3_dict, "info.mtime")
     if isinstance(s, datetime.datetime):
         mp3.mtime = s

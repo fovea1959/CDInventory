@@ -110,6 +110,9 @@ class MP3(BaseWithJson):
     mtime: Mapped[datetime.datetime] = mapped_column(DateTime)
     encoded_time: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
 
+    acoustid_id: Mapped[Optional[str]] = mapped_column(Text)
+    acoustid_fingerprint: Mapped[Optional[str]] = mapped_column(Text)
+
     updated_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
     def age_sort_key(self):
