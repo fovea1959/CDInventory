@@ -396,6 +396,8 @@ class FilterEditTable(ttk.Frame):
                 term = "" if filter_val == f"Search {c_name}..." else filter_val
                 if term and c_idx < len(self.column_descriptions):
                     row_val = column_description.getter_setter.do_get(row)
+                    if column_description.type_converter is not None:
+                        row_val = column_description.type_converter.to_string(row_val)
                     if column_description.filter_matcher is None:
                         column_match = term.lower() in str(row_val).lower()
                     else:
