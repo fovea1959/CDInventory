@@ -132,8 +132,10 @@ class QGuiApp:
         self.m_mp3s = self.builder.get_object("m_mp3s")
 
         self.cds_frame = self.setup_cds_frame()
-        self.mp3s_frame = self.setup_mp3s_frame()
-        self.unripped_cds_frame = self.setup_unripped_cds_frame()
+        self.mp3s_frame = None
+        self.setup_mp3s_frame()
+        self.unripped_cds_frame = None
+        self.setup_unripped_cds_frame()
 
         self.status_text_var = self.builder.get_variable("status_text")
 
@@ -352,7 +354,8 @@ class QGuiApp:
         self.status_text_var.set(m)
         # self.toast(data, 10)
         self.m_mp3s.entryconfig("Load MP3s", state="normal")
-        pass
+        self.reload_mp3s_frame()
+        self.reload_unripped_cds_frame()
 
     def get_cd_for_command(self, fte: FilterEditTable):
         cd: CD | None = None
@@ -427,11 +430,6 @@ class QGuiApp:
         return table_widget
 
     def setup_mp3s_frame(self):
-        d = []
-
-        for mp3 in self.g.dao.get_all_mp3s():
-            d.append(mp3)
-
         column_descriptions = [
             ColumnDescription(label="Path", read_only=True, getter_setter=CGS("path")),
             ColumnDescription(label="Title", read_only=True, getter_setter=CGS("title")),
@@ -442,7 +440,7 @@ class QGuiApp:
 
         # Component Initialization
         tab_container = self.builder.get_object("mp3_frame")
-        table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
+        self.mp3s_frame = table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
         table_widget.data_interface = ReadOnlyDataInterface(g=self.g)
 
         table_widget.menu.add_separator()
@@ -450,12 +448,21 @@ class QGuiApp:
                                       command=lambda: self.command_send_file_to_picard(table_widget))
         table_widget.menu.add_command(label="Send directory to Picard",
                                       command=lambda: self.command_send_directory_to_picard(table_widget))
-        table_widget.data_store = d
-        table_widget.populate_tree()
+        self.reload_mp3s_frame()
 
         table_widget.pack(fill="both", expand=True)
 
         return table_widget
+
+    def reload_mp3s_frame(self):
+        d = []
+
+        for mp3 in self.g.dao.get_all_mp3s():
+            d.append(mp3)
+
+        self.mp3s_frame.data_store = d
+        self.mp3s_frame.populate_tree()
+
 
     def command_send_file_to_picard(self, fte: FilterEditTable):
         mp3 = self.get_mp3_for_command(fte)
@@ -496,11 +503,6 @@ class QGuiApp:
         return mp3
 
     def setup_unripped_cds_frame(self):
-        d = []
-
-        for cd in self.g.dao.get_all_unripped_cds():
-            d.append(cd)
-
         dropdown_converter = CodeAndTextContainer()
         for location in self.g.dao.get_all_locations():
             dropdown_converter.add(location.location_id, location.location_description)
@@ -516,7 +518,7 @@ class QGuiApp:
 
         # Component Initialization
         tab_container = self.builder.get_object("unripped_cd_frame")
-        table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
+        self.unripped_cds_frame = table_widget = table_widget = FilterEditTable(tab_container, column_descriptions=column_descriptions)
         table_widget.data_interface = ReadOnlyDataInterface(g=self.g)
 
         table_widget.menu.add_separator()
@@ -525,12 +527,19 @@ class QGuiApp:
         table_widget.menu.add_command(label="Send release id to Picard",
                                       command=lambda: self.command_send_release_id_to_picard(table_widget))
 
-        table_widget.data_store = d
-        table_widget.populate_tree()
+        self.reload_unripped_cds_frame()
 
         table_widget.pack(fill="both", expand=True)
 
-        return table_widget
+
+    def reload_unripped_cds_frame(self):
+        d = []
+
+        for cd in self.g.dao.get_all_unripped_cds():
+            d.append(cd)
+
+        self.unripped_cds_frame.data_store = d
+        self.unripped_cds_frame.populate_tree()
 
     def toast(self, message, duration):
         # Create a borderless popup window

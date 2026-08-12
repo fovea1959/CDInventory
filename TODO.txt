@@ -7,3 +7,5 @@
 - fix search in a pulldown column
 - refresh windows after reload mp3
 - refresh after location change
+- set window sash correctly if nothing in prefs file
+- add tport=8000 when opening browser

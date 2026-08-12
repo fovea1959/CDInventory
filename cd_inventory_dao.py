@@ -92,4 +92,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     main(sys.argv[1:])
