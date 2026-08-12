@@ -4,7 +4,6 @@
 - scanner should handle cases where multiple CDs match barcode
 - add dialog box with ability to show all information for line
 - add ability to look for duplicate acousticids
-- fix search in a pulldown column
 - refresh windows after reload mp3
 - refresh after location change
 - set window sash correctly if nothing in prefs file
